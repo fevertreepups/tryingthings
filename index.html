@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HORMUZ WATCH — Maritime Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent:#0070f3;--accent-light:#3291ff;--accent-dark:#0761d1;--accent-glow:rgba(0,112,243,0.2);
+  --card-bg:#111111;--card-border:rgba(255,255,255,0.08);--card-hover:rgba(255,255,255,0.04);
+  --text-primary:#ededed;--text-secondary:#888888;--text-muted:#555555;
+  --red:#e5484d;--orange:#f5a623;--green:#45a557;--purple:#8e4ec6;--cyan:#12a594;--pink:#e93d82;
+  --bg:#000000;
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.3),0 1px 3px rgba(0,0,0,0.15);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.25),0 1px 3px rgba(0,0,0,0.2);
+  --shadow-lg:0 12px 40px rgba(0,0,0,0.4),0 4px 12px rgba(0,0,0,0.2);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;color:var(--text-primary);background:var(--bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+.glass{background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;box-shadow:var(--shadow-sm);transition:box-shadow 0.3s ease,border-color 0.3s ease,transform 0.3s ease;}
+.glass:hover{box-shadow:var(--shadow-md);border-color:rgba(255,255,255,0.12);}
+.app{min-height:100vh;display:flex;}
+
+/* Staggered entrance animations */
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 8px rgba(0,112,243,0.15);}50%{box-shadow:0 0 20px rgba(0,112,243,0.3);}}
+.panel{animation:fadeSlideUp 0.5s ease both;}
+.section-grid .panel:nth-child(1){animation-delay:0.05s;}
+.section-grid .panel:nth-child(2){animation-delay:0.1s;}
+.section-grid .panel:nth-child(3){animation-delay:0.15s;}
+.kpi-card{animation:fadeSlideUp 0.4s ease both;}
+.kpi-card:nth-child(1){animation-delay:0s;}.kpi-card:nth-child(2){animation-delay:0.05s;}.kpi-card:nth-child(3){animation-delay:0.1s;}
+.kpi-card:nth-child(4){animation-delay:0.15s;}.kpi-card:nth-child(5){animation-delay:0.2s;}.kpi-card:nth-child(6){animation-delay:0.25s;}
+
+/* Sidebar */
+.sidebar{width:220px;padding:20px 0;display:flex;flex-direction:column;background:#0a0a0a;border-right:1px solid rgba(255,255,255,0.08);position:sticky;top:0;height:100vh;flex-shrink:0;overflow-y:auto;box-shadow:2px 0 20px rgba(0,0,0,0.3);}
+.sidebar-header{padding:0 16px 24px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.sidebar-logo-area{display:flex;align-items:center;gap:10px;margin-bottom:0;}
+.sidebar-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,112,243,0.3);}
+.sidebar-title{display:flex;flex-direction:column;}
+.sidebar-brand{font-size:13px;font-weight:700;color:var(--text-primary);letter-spacing:-0.3px;}
+.sidebar-subtitle{font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px;}
+
+/* Sidebar sections */
+.sidebar-section{padding:16px 0;}
+.sidebar-section:first-of-type{padding-top:12px;}
+.sidebar-section-label{font-size:10px;font-weight:600;letter-spacing:0.8px;color:var(--text-muted);text-transform:uppercase;padding:0 16px 10px;margin-bottom:4px;}
+.sidebar-btn{width:100%;padding:10px 16px;display:flex;align-items:center;gap:12px;color:var(--text-secondary);cursor:pointer;border:none;background:transparent;font-size:13px;position:relative;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);font-family:inherit;font-weight:500;text-align:left;border-left:3px solid transparent;}
+.sidebar-btn:hover{color:var(--text-primary);background:rgba(255,255,255,0.04);border-left-color:rgba(255,255,255,0.1);}
+.sidebar-btn.active{color:#ededed;background:rgba(0,112,243,0.08);border-left:3px solid var(--accent);box-shadow:inset 0 0 20px rgba(0,112,243,0.04);}
+.sidebar-btn.active .sidebar-icon{color:var(--accent-light);}
+.sidebar-btn .sidebar-icon{width:16px;height:16px;color:var(--text-secondary);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.sidebar-btn:hover .sidebar-icon{color:var(--text-primary);}
+.sidebar-btn-label{flex:1;}
+.sidebar-badge{font-size:10px;font-weight:600;background:rgba(229,72,77,0.15);color:var(--red);padding:2px 6px;border-radius:3px;margin-left:auto;flex-shrink:0;}
+.sidebar-badge.count{background:rgba(0,112,243,0.15);color:var(--accent-light);}
+.sidebar-badge.shortcut{font-size:9px;background:rgba(255,255,255,0.06);color:var(--text-muted);font-weight:400;}
+.sidebar-spacer{flex:1;}
+.sidebar-bottom{padding:16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:12px;}
+.sidebar-avatar{width:32px;height:32px;border-radius:8px;background:rgba(0,112,243,0.15);display:flex;align-items:center;justify-content:center;color:var(--accent-light);font-weight:600;font-size:12px;flex-shrink:0;}
+.sidebar-user-info{flex:1;min-width:0;}
+.sidebar-user-name{font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sidebar-user-role{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.main{flex:1;padding:28px 32px;overflow-y:auto;max-height:100vh;}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:16px;}
+.header h1{font-size:28px;font-weight:700;letter-spacing:-0.8px;color:var(--text-primary);background:linear-gradient(135deg,var(--text-primary) 0%,var(--text-secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.header-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.threat-pill{background:rgba(239,68,68,0.12);border:1px solid rgba(229,72,77,0.4);color:var(--red);padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;animation:pulseGlow 3s ease-in-out infinite;animation-name:threatPulse;}
+@keyframes threatPulse{0%,100%{box-shadow:0 0 8px rgba(229,72,77,0.15),0 0 2px rgba(229,72,77,0.1);}50%{box-shadow:0 0 16px rgba(229,72,77,0.3),0 0 4px rgba(229,72,77,0.2);}}
+.clock{font-size:11px;color:var(--text-muted);font-weight:500;font-variant-numeric:tabular-nums;}
+.api-indicator{font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;}
+.live-dot{width:6px;height:6px;border-radius:50%;display:inline-block;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:28px;}
+.kpi-card{padding:20px;text-align:center;transition:all 0.35s cubic-bezier(0.4,0,0.2,1);border-radius:12px;position:relative;background:var(--card-bg);border:1px solid var(--card-border);}
+.kpi-card::before{content:'';position:absolute;inset:0;border-radius:12px;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,0.06),transparent 60%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:0;transition:opacity 0.3s;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);background:rgba(255,255,255,0.04);}
+.kpi-card:hover::before{opacity:1;}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;}
+.kpi-value{font-size:26px;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+.kpi-value.red{color:var(--red);text-shadow:0 0 20px rgba(229,72,77,0.2);}
+.kpi-value.orange{color:var(--orange);text-shadow:0 0 20px rgba(245,166,35,0.2);}
+.kpi-value.lime{color:var(--accent);text-shadow:0 0 20px rgba(0,112,243,0.2);}
+.kpi-value.green{color:var(--green);text-shadow:0 0 20px rgba(69,165,87,0.2);}
+.kpi-value.purple{color:var(--purple);text-shadow:0 0 20px rgba(142,78,198,0.2);}
+.kpi-delta{font-size:10px;margin-top:6px;font-weight:400;color:var(--text-muted);}
+
+/* Sections */
+.section-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.section-grid.triple{grid-template-columns:1fr 1fr 1fr;}
+
+/* Panel */
+.panel{padding:20px;overflow:hidden;border-radius:12px;position:relative;}
+.panel::after{content:'';position:absolute;top:0;left:20px;right:20px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06) 50%,transparent);pointer-events:none;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.panel-title{font-size:12px;font-weight:600;letter-spacing:0.3px;color:var(--text-secondary);}
+.panel-badge{font-size:10px;font-weight:600;letter-spacing:0.3px;padding:4px 10px;border-radius:6px;
+  background:rgba(0,112,243,0.1);color:var(--accent-light);border:1px solid rgba(0,112,243,0.2);}
+.panel-badge.red{background:rgba(229,72,77,0.1);border:1px solid rgba(229,72,77,0.25);color:var(--red);}
+.panel-badge.green{background:rgba(69,165,87,0.1);border:1px solid rgba(69,165,87,0.25);color:var(--green);}
+.panel-badge.orange{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.25);color:var(--orange);}
+.panel-badge.purple{background:rgba(142,78,198,0.1);border:1px solid rgba(142,78,198,0.25);color:var(--purple);}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;margin-bottom:16px;}
+.tab-btn{padding:6px 12px;font-size:11px;font-weight:500;background:transparent;color:var(--text-muted);border:1px solid transparent;border-radius:6px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+.tab-btn:hover{color:var(--text-secondary);background:rgba(255,255,255,0.03);}
+.tab-btn.active{color:#ededed;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);}
+
+/* Map */
+.map-wrap{position:relative;border-radius:12px;overflow:hidden;height:580px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.06);box-shadow:0 8px 32px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.04);}
+.map-svg{width:100%;height:100%;}
+.map-legend{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:8px;border:1px solid rgba(255,255,255,0.08);}
+.map-legend-item{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--text-muted);font-weight:500;}
+.legend-dot{width:6px;height:6px;border-radius:50%;}
+
+/* Map interactive markers */
+.map-marker{cursor:pointer;transition:opacity 0.2s;}
+.map-marker:hover{opacity:1 !important;}
+.map-marker:hover .marker-ring{animation:none !important;r:10;}
+.map-tooltip{position:absolute;background:rgba(17,17,17,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 14px;pointer-events:none;opacity:0;transition:opacity 0.15s ease,transform 0.15s ease;transform:translateY(4px);z-index:10;max-width:240px;box-shadow:0 12px 40px rgba(0,0,0,0.6),0 0 1px rgba(255,255,255,0.1);}
+.map-tooltip.visible{transform:translateY(0);}
+.map-tooltip.visible{opacity:1;}
+.map-tooltip-title{font-size:11px;font-weight:600;color:#ededed;margin-bottom:3px;}
+.map-tooltip-desc{font-size:10px;color:#888;line-height:1.5;}
+.map-tooltip-status{display:inline-block;font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;margin-top:5px;}
+
+/* Table */
+.vessel-table{width:100%;border-collapse:collapse;font-size:11px;}
+.vessel-table th{text-align:left;padding:10px 12px;font-size:9px;font-weight:600;letter-spacing:0.5px;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.05);position:sticky;top:0;background:var(--card-bg);}
+.vessel-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.02);color:var(--text-secondary);font-size:11px;}
+.vessel-table td a{transition:color 0.2s;}
+.vessel-table tr{transition:background 0.15s ease;}
+.vessel-table tr:hover td{background:rgba(255,255,255,0.03);}
+.flag-tag{padding:3px 8px;border-radius:4px;font-size:9px;font-weight:500;background:rgba(255,255,255,0.05);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.06);white-space:nowrap;}
+.status-tag{padding:3px 8px;border-radius:4px;font-size:9px;font-weight:600;letter-spacing:0.2px;}
+.status-tag.attacked{background:linear-gradient(135deg,var(--red),#c0392b);color:#fff;box-shadow:0 1px 4px rgba(229,72,77,0.3);}
+.status-tag.seized{background:linear-gradient(135deg,var(--orange),#d68910);color:#fff;box-shadow:0 1px 4px rgba(245,166,35,0.3);}
+.status-tag.transited{background:linear-gradient(135deg,var(--green),#2d8a4e);color:#fff;box-shadow:0 1px 4px rgba(69,165,87,0.3);}
+.status-tag.sunk{background:linear-gradient(135deg,#c0392b,#922b21);color:#fff;box-shadow:0 1px 4px rgba(229,72,77,0.3);}
+
+/* Filters */
+.filters{display:flex;gap:6px;margin-bottom:14px;}
+.filter-pill{padding:6px 12px;font-size:10px;font-weight:500;background:transparent;color:var(--text-muted);border:1px solid rgba(255,255,255,0.06);border-radius:6px;cursor:pointer;font-family:inherit;transition:all 0.2s;}
+.filter-pill:hover{color:var(--text-secondary);border-color:rgba(255,255,255,0.1);}
+.filter-pill.active{background:#ededed;color:#000;border-color:#ededed;}
+
+/* Chart */
+.chart-wrap{position:relative;height:220px;}.chart-wrap.short{height:170px;}
+
+/* Chokepoint */
+.chokepoint-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+.choke-card{padding:16px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);text-align:center;}
+.choke-card:hover{background:rgba(255,255,255,0.04);}
+.choke-name{font-size:10px;font-weight:600;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;}
+.choke-status{font-size:18px;font-weight:700;margin-bottom:4px;}
+.choke-detail{font-size:10px;color:var(--text-muted);line-height:1.5;}
+.choke-card.closed .choke-status{color:var(--red);}
+.choke-card.degraded .choke-status{color:var(--orange);}
+.choke-card.open .choke-status{color:var(--green);}
+
+/* Pipeline */
+.pipeline-item{display:flex;align-items:center;gap:12px;padding:14px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);margin-bottom:10px;}
+.pipeline-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:rgba(0,112,243,0.1);border:1px solid rgba(0,112,243,0.2);color:var(--accent-light);}
+.pipeline-info{flex:1;}.pipeline-name{font-size:12px;font-weight:600;}.pipeline-sub{font-size:10px;color:var(--text-muted);margin-top:2px;}
+.pipeline-capacity{text-align:right;}.pipeline-cap-val{font-size:18px;font-weight:700;color:var(--accent-light);}.pipeline-cap-label{font-size:8px;color:var(--text-muted);letter-spacing:0.3px;}
+.pipeline-bar{height:4px;background:rgba(255,255,255,0.04);border-radius:2px;margin-top:6px;overflow:hidden;}
+.pipeline-fill{height:100%;border-radius:2px;}
+
+/* Military */
+.mil-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.03);align-items:flex-start;}
+.mil-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:rgba(0,112,243,0.1);border:1px solid rgba(0,112,243,0.2);color:var(--accent-light);}
+.mil-icon.iran{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.2);color:var(--red);}
+.mil-name{font-size:11px;font-weight:600;}.mil-desc{font-size:10px;color:var(--text-muted);line-height:1.5;margin-top:2px;}
+
+/* Escort */
+.escort-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);margin-bottom:8px;}
+.escort-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.escort-dot.active{background:var(--green);box-shadow:0 0 8px rgba(69,165,87,0.4);}
+.escort-dot.pending{background:var(--orange);box-shadow:0 0 8px rgba(245,158,11,0.3);}
+.escort-dot.blocked{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,0.3);}
+.escort-title{font-size:11px;font-weight:600;}.escort-desc{font-size:10px;color:var(--text-muted);margin-top:2px;}
+
+/* SPR */
+.spr-item{margin-bottom:12px;}.spr-head{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+.spr-name{color:var(--text-secondary);font-weight:500;}.spr-val{font-weight:600;color:var(--text-muted);}
+.spr-track{height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;position:relative;}
+.spr-fill{height:100%;border-radius:2px;transition:width 1s ease;}
+.spr-release{height:100%;position:absolute;top:0;border-radius:2px;opacity:0.6;}
+
+/* Dep */
+.dep-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+.dep-flag{font-size:20px;}.dep-info{flex:1;}.dep-name{font-size:12px;font-weight:600;}.dep-detail{font-size:10px;color:var(--text-muted);margin-top:2px;}
+.dep-pct{font-size:18px;font-weight:700;color:var(--text-secondary);}
+
+/* Casualties */
+.cas-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.cas-card{text-align:center;padding:14px 8px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);}
+.cas-num{font-size:24px;font-weight:700;margin-bottom:4px;}.cas-label{font-size:9px;color:var(--text-muted);font-weight:600;letter-spacing:0.3px;text-transform:uppercase;}
+
+/* Entity */
+.entity-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.entity-card{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);}
+.entity-card:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+.entity-name{font-size:12px;font-weight:600;}.entity-type{font-size:9px;color:var(--text-muted);letter-spacing:0.2px;margin-top:2px;}
+.entity-stat{font-size:10px;color:var(--text-muted);margin-top:6px;}.entity-stat span{font-weight:600;}
+
+/* Country bars */
+.country-bar{margin-bottom:10px;}.cb-head{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+.cb-name{color:var(--text-secondary);font-weight:500;}.cb-val{color:var(--text-muted);font-weight:600;}
+.cb-track{height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;}.cb-fill{height:100%;border-radius:2px;}
+
+/* Feed */
+.feed-item{padding:8px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02);display:flex;gap:10px;}
+.feed-time{font-size:9px;color:var(--text-muted);min-width:52px;font-weight:500;font-variant-numeric:tabular-nums;}.feed-text{color:var(--text-secondary);line-height:1.5;}
+.feed-source{font-size:9px;color:var(--text-muted);font-weight:500;margin-top:2px;}
+
+/* API */
+.api-config-title{font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;letter-spacing:0.2px;}
+.api-input-group{margin-bottom:12px;}.api-label{font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:6px;display:block;}
+.api-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;color:var(--text-primary);font-family:'Courier New',monospace;font-size:11px;outline:none;}
+.api-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,112,243,0.15);}
+.btn-primary{background:linear-gradient(135deg,#f5f5f5,#e0e0e0);color:#000;border:none;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;font-size:11px;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.25);background:linear-gradient(135deg,#fff,#ededed);}
+.btn-primary:active{transform:translateY(0);box-shadow:0 1px 2px rgba(0,0,0,0.2);}
+.btn-danger{background:linear-gradient(135deg,var(--red),#c0392b);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;font-size:11px;transition:all 0.2s;box-shadow:0 1px 3px rgba(229,72,77,0.3);}
+.btn-danger:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(229,72,77,0.3);}
+
+/* API Source Cards */
+.api-source{padding:14px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);margin-bottom:12px;transition:border-color 0.3s;}
+.api-source:hover{border-color:rgba(255,255,255,0.08);}
+.api-source.connected{border-color:rgba(0,112,243,0.25);background:rgba(0,112,243,0.03);}
+.api-source-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.api-source-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);flex-shrink:0;transition:all 0.3s;}
+.api-source-dot.live{background:var(--green);box-shadow:0 0 8px rgba(69,165,87,0.4);}
+.api-source-name{font-size:12px;font-weight:600;color:var(--text-primary);}
+.api-source-tag{font-size:9px;font-weight:500;letter-spacing:0.3px;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.05);color:var(--text-muted);margin-left:auto;}
+.api-source-desc{font-size:10px;color:var(--text-muted);line-height:1.5;margin-bottom:12px;}
+.api-source select.api-input{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,0.03) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,0.3)'/%3E%3C/svg%3E") no-repeat right 10px center;padding-right:28px;}
+
+/* Timeline */
+.timeline{position:relative;padding-left:20px;}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,var(--accent),rgba(0,112,243,0.2),transparent);}
+.tl-item{position:relative;padding:9px 0 13px 16px;}
+.tl-dot{position:absolute;left:-18px;top:12px;width:10px;height:10px;border-radius:50%;border:2px solid;background:var(--bg);}
+.tl-dot.critical{border-color:var(--red);box-shadow:0 0 8px rgba(229,72,77,0.4);}
+.tl-dot.high{border-color:var(--orange);box-shadow:0 0 8px rgba(245,158,11,0.3);}
+.tl-dot.medium{border-color:var(--accent);box-shadow:0 0 8px rgba(0,112,243,0.3);}
+.tl-date{font-size:9px;color:var(--text-muted);font-weight:500;letter-spacing:0.3px;}
+.tl-title{font-size:11px;font-weight:600;color:var(--text-primary);margin:3px 0 2px;}
+.tl-desc{font-size:10px;color:var(--text-muted);line-height:1.5;}
+
+/* Alert box */
+.alert-box{padding:12px 14px;border-radius:8px;margin-top:10px;}
+.alert-box.red{background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.1);}
+.alert-box.blue{background:rgba(0,112,243,0.06);border:1px solid rgba(0,112,243,0.15);}
+.alert-box .alert-title{font-size:11px;font-weight:600;margin-bottom:3px;}
+.alert-box.red .alert-title{color:var(--red);}
+.alert-box.blue .alert-title{color:var(--accent-light);}
+.alert-box .alert-desc{font-size:10px;color:var(--text-muted);line-height:1.5;}
+
+/* Section label */
+.section-label{font-size:9px;font-weight:600;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;}
+
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px;}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.12);}
+
+/* Stock rows */
+.stock-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);gap:12px;}
+.stock-row:last-child{border-bottom:none;}
+.stock-ticker{font-size:12px;font-weight:700;color:var(--text-primary);min-width:55px;}
+.stock-name{flex:1;font-size:11px;color:var(--text-secondary);font-weight:500;}
+.stock-price{font-size:12px;font-weight:600;color:var(--text-primary);min-width:65px;text-align:right;font-variant-numeric:tabular-nums;}
+.stock-change{font-size:11px;font-weight:600;min-width:70px;text-align:right;padding:3px 8px;border-radius:4px;font-variant-numeric:tabular-nums;}
+.stock-change.up{color:var(--green);background:rgba(69,165,87,0.1);}
+.stock-change.down{color:var(--red);background:rgba(229,72,77,0.1);}
+.stock-sparkline{width:60px;height:24px;flex-shrink:0;}
+.stock-sector-tag{font-size:8px;color:var(--text-muted);letter-spacing:0.5px;font-weight:500;padding:2px 6px;background:rgba(255,255,255,0.04);border-radius:3px;}
+
+/* Theme toggle */
+.theme-toggle{width:100%;padding:6px 16px;display:flex;align-items:center;gap:8px;color:var(--text-muted);cursor:pointer;border:none;background:transparent;font-size:9px;font-family:inherit;font-weight:500;text-align:left;transition:all 0.2s;}
+.theme-toggle:hover{color:var(--text-primary);background:rgba(255,255,255,0.04);}
+.theme-toggle .sidebar-icon{width:12px;height:12px;}
+.theme-toggle-track{width:24px;height:12px;border-radius:6px;background:rgba(255,255,255,0.1);position:relative;transition:background 0.3s;flex-shrink:0;}
+.theme-toggle-thumb{width:8px;height:8px;border-radius:50%;background:var(--text-muted);position:absolute;top:2px;left:2px;transition:all 0.3s;}
+body.light .theme-toggle-track{background:var(--accent);}
+body.light .theme-toggle-thumb{left:14px;background:#fff;}
+
+/* Light mode overrides */
+body.light{--accent:#0070f3;--accent-light:#0761d1;--accent-dark:#0451b0;--accent-glow:rgba(0,112,243,0.1);
+  --card-bg:#ffffff;--card-border:rgba(0,0,0,0.08);--card-hover:rgba(0,0,0,0.02);
+  --text-primary:#171717;--text-secondary:#666666;--text-muted:#999999;
+  --red:#e5484d;--orange:#d97706;--green:#45a557;--purple:#8e4ec6;--cyan:#12a594;--pink:#e93d82;
+  --bg:#fafafa;}
+body.light .sidebar{background:#ffffff;border-right:1px solid rgba(0,0,0,0.08);box-shadow:2px 0 16px rgba(0,0,0,0.04);}
+body.light .sidebar-header{border-bottom:1px solid rgba(0,0,0,0.06);}
+body.light .sidebar-logo{background:var(--accent);color:#fff;}
+body.light .sidebar-btn:hover{background:rgba(0,0,0,0.04);color:var(--text-primary);}
+body.light .sidebar-btn.active{color:var(--text-primary);background:rgba(0,0,0,0.04);border-left-color:var(--accent);}
+body.light .sidebar-btn.active .sidebar-icon{color:var(--text-primary);}
+body.light .sidebar-btn .sidebar-icon{color:var(--text-muted);}
+body.light .sidebar-btn:hover .sidebar-icon{color:var(--text-primary);}
+body.light .sidebar-bottom{border-top:1px solid rgba(0,0,0,0.06);}
+body.light .sidebar-avatar{background:rgba(0,112,243,0.1);color:var(--accent);}
+body.light .sidebar-badge{background:rgba(229,72,77,0.08);color:var(--red);}
+body.light .sidebar-badge.count{background:rgba(0,112,243,0.08);color:var(--accent);}
+body.light .sidebar-badge.shortcut{background:rgba(0,0,0,0.05);color:var(--text-muted);}
+body.light .glass{background:var(--card-bg);border:1px solid var(--card-border);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);}
+body.light .glass:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);}
+body.light .kpi-card{background:var(--card-bg);border-color:var(--card-border);}
+body.light .kpi-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);background:var(--card-bg);}
+body.light .kpi-value.red{text-shadow:none;}.light .kpi-value.orange{text-shadow:none;}.light .kpi-value.lime{text-shadow:none;}.light .kpi-value.green{text-shadow:none;}.light .kpi-value.purple{text-shadow:none;}
+body.light .panel::after{background:linear-gradient(90deg,transparent,rgba(0,0,0,0.04) 50%,transparent);}
+body.light .btn-primary{background:linear-gradient(135deg,#171717,#333);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);}
+body.light .btn-primary:hover{background:linear-gradient(135deg,#222,#444);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+body.light .threat-pill{background:rgba(220,38,38,0.08);border-color:rgba(220,38,38,0.2);color:var(--red);}
+body.light .tab-btn:hover{color:var(--text-secondary);background:rgba(0,0,0,0.03);}
+body.light .tab-btn.active{color:var(--text-primary);background:rgba(0,0,0,0.05);border-color:rgba(0,0,0,0.1);}
+body.light .filter-pill{border-color:rgba(0,0,0,0.08);color:var(--text-muted);}
+body.light .filter-pill:hover{color:var(--text-secondary);border-color:rgba(0,0,0,0.12);}
+body.light .filter-pill.active{background:#171717;color:#fff;border-color:#171717;}
+body.light .vessel-table th{border-bottom:1px solid rgba(0,0,0,0.06);background:var(--card-bg);}
+body.light .vessel-table td{border-bottom:1px solid rgba(0,0,0,0.03);}
+body.light .vessel-table tr:hover td{background:rgba(0,0,0,0.02);}
+body.light .flag-tag{background:rgba(0,0,0,0.04);color:var(--text-secondary);border-color:rgba(0,0,0,0.06);}
+body.light .status-tag.transited{background:var(--green);color:#fff;}
+body.light .status-tag.attacked{background:var(--red);color:#fff;}
+body.light .status-tag.seized{background:var(--orange);color:#fff;}
+body.light .status-tag.sunk{background:var(--red);color:#fff;}
+body.light .map-wrap{background:#f0f0f0;border-color:rgba(0,0,0,0.08);}
+body.light .map-legend{background:rgba(255,255,255,0.9);border-color:rgba(0,0,0,0.08);}
+body.light .pipeline-item{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.04);}
+body.light .pipeline-icon{background:rgba(0,112,243,0.06);border-color:rgba(0,112,243,0.12);color:var(--accent);}
+body.light .pipeline-bar{background:rgba(0,0,0,0.04);}
+body.light .mil-item{border-bottom-color:rgba(0,0,0,0.04);}
+body.light .mil-icon{background:rgba(0,112,243,0.06);border-color:rgba(0,112,243,0.12);color:var(--accent);}
+body.light .mil-icon.iran{background:rgba(229,72,77,0.06);border-color:rgba(229,72,77,0.12);color:var(--red);}
+body.light .escort-item{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.04);}
+body.light .choke-card{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.04);}
+body.light .choke-card:hover{background:rgba(0,0,0,0.04);}
+body.light .choke-compare-card{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.04);}
+body.light .choke-compare-card:hover{background:rgba(0,0,0,0.04);}
+body.light .sanctions-item{background:rgba(220,38,38,0.03);border-color:rgba(220,38,38,0.08);}
+body.light .sanctions-item.clear{background:rgba(69,165,87,0.03);border-color:rgba(69,165,87,0.08);}
+body.light .cas-card{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.04);}
+body.light .entity-card{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.04);}
+body.light .entity-card:hover{background:rgba(0,0,0,0.04);border-color:rgba(0,0,0,0.08);}
+body.light .alert-box.red{background:rgba(220,38,38,0.04);border-color:rgba(220,38,38,0.1);}
+body.light .alert-box.blue{background:rgba(0,112,243,0.04);border-color:rgba(0,112,243,0.1);}
+body.light .alert-box.blue .alert-title{color:var(--accent);}
+body.light .spr-track{background:rgba(0,0,0,0.04);}
+body.light .dep-item{border-bottom-color:rgba(0,0,0,0.04);}
+body.light .cb-track{background:rgba(0,0,0,0.04);}
+body.light .feed-item{border-bottom-color:rgba(0,0,0,0.03);}
+body.light .api-source{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.06);}
+body.light .api-source:hover{border-color:rgba(0,0,0,0.1);}
+body.light .api-source.connected{border-color:rgba(0,112,243,0.2);background:rgba(0,112,243,0.02);}
+body.light .api-input{background:rgba(0,0,0,0.03);border-color:rgba(0,0,0,0.08);color:var(--text-primary);}
+body.light .api-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,112,243,0.15);}
+body.light .stock-change.up{color:var(--green);background:rgba(69,165,87,0.08);}
+body.light .stock-change.down{color:var(--red);background:rgba(229,72,77,0.06);}
+body.light .stock-row{border-bottom-color:rgba(0,0,0,0.04);}
+body.light .notif-btn{border-color:rgba(0,0,0,0.08);color:var(--text-secondary);}
+body.light .notif-btn:hover{background:rgba(0,0,0,0.04);}
+body.light .notif-panel{background:#ffffff;border-left-color:rgba(0,0,0,0.08);}
+body.light .notif-header{border-bottom-color:rgba(0,0,0,0.06);}
+body.light .notif-item:hover{background:rgba(0,0,0,0.02);}
+body.light .notif-item.critical{background:rgba(220,38,38,0.03);}
+body.light .notif-item.warning{background:rgba(217,119,6,0.03);}
+body.light .notif-item.info{background:rgba(0,112,243,0.03);}
+body.light .search-modal{background:#ffffff;border-color:rgba(0,0,0,0.1);box-shadow:0 20px 60px rgba(0,0,0,0.15);}
+body.light .search-input-wrap{border-bottom-color:rgba(0,0,0,0.06);}
+body.light .search-result:hover{background:rgba(0,0,0,0.04);}
+body.light .search-hint{border-top-color:rgba(0,0,0,0.04);}
+body.light .search-hint kbd{background:rgba(0,0,0,0.06);}
+body.light .panel-badge{background:rgba(0,112,243,0.06);color:var(--accent);border-color:rgba(0,112,243,0.12);}
+body.light .panel-badge.red{background:rgba(229,72,77,0.06);border-color:rgba(229,72,77,0.12);color:var(--red);}
+body.light .panel-badge.green{background:rgba(69,165,87,0.06);border-color:rgba(69,165,87,0.12);color:var(--green);}
+body.light .panel-badge.orange{background:rgba(217,119,6,0.06);border-color:rgba(217,119,6,0.12);color:var(--orange);}
+body.light .panel-badge.purple{background:rgba(142,78,198,0.06);border-color:rgba(142,78,198,0.12);color:var(--purple);}
+body.light .tl-dot.medium{border-color:var(--accent);box-shadow:0 0 6px rgba(0,112,243,0.2);}
+body.light .timeline::before{background:linear-gradient(to bottom,var(--accent),rgba(0,112,243,0.2),transparent);}
+body.light .theme-toggle:hover{background:rgba(0,0,0,0.04);}
+body.light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.1);}
+body.light ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,0.16);}
+
+/* Smooth theme transition */
+body,body .sidebar,body .glass,body .sidebar-btn,body .panel,body .api-source,body .api-input,body .notif-panel,body .search-modal,body .kpi-card,body .btn-primary{transition:background-color 0.35s ease,border-color 0.35s ease,color 0.35s ease,box-shadow 0.35s ease;}
+
+@media(max-width:1400px){.kpi-row{grid-template-columns:repeat(3,1fr);}.section-grid{grid-template-columns:1fr;}.section-grid.triple{grid-template-columns:1fr 1fr;}}
+@media(max-width:900px){.sidebar{width:240px;}.kpi-row{grid-template-columns:repeat(2,1fr);}.entity-grid{grid-template-columns:1fr;}.cas-grid{grid-template-columns:repeat(2,1fr);}}
+
+/* Search Modal */
+.search-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding-top:10vh;}
+.search-overlay.open{display:flex;}
+.search-modal{width:600px;max-width:90vw;background:rgba(26,26,26,0.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.5),0 0 1px rgba(255,255,255,0.1);animation:fadeSlideUp 0.2s ease;}
+.search-input-wrap{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:12px;}
+.search-input-wrap svg{width:18px;height:18px;color:var(--text-muted);flex-shrink:0;}
+.search-input{flex:1;background:none;border:none;color:var(--text-primary);font-size:15px;font-family:inherit;outline:none;}
+.search-input::placeholder{color:var(--text-muted);}
+.search-results{max-height:400px;overflow-y:auto;padding:8px;}
+.search-result{padding:12px 16px;border-radius:8px;cursor:pointer;transition:background 0.15s;}
+.search-result:hover{background:rgba(255,255,255,0.05);}
+.search-result-type{font-size:9px;font-weight:600;letter-spacing:0.5px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;}
+.search-result-title{font-size:13px;font-weight:600;color:var(--text-primary);}
+.search-result-desc{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.search-hint{padding:16px 20px;font-size:10px;color:var(--text-muted);border-top:1px solid rgba(255,255,255,0.04);display:flex;justify-content:space-between;}
+.search-hint kbd{background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:3px;font-size:9px;font-family:inherit;}
+.search-empty{text-align:center;padding:32px 16px;color:var(--text-muted);font-size:12px;}
+
+/* Notification Panel */
+.notif-btn{position:relative;background:none;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:6px 8px;cursor:pointer;color:var(--text-secondary);transition:all 0.2s;}
+.notif-btn:hover{background:rgba(255,255,255,0.04);color:var(--text-primary);}
+.notif-btn svg{width:16px;height:16px;}
+.notif-badge-count{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:8px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.notif-panel{position:fixed;top:0;right:0;width:380px;height:100vh;background:rgba(20,20,20,0.98);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-left:1px solid rgba(255,255,255,0.06);z-index:999;transform:translateX(100%);transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,0.3);}
+.notif-panel.open{transform:translateX(0);}
+.notif-header{padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;}
+.notif-header h3{font-size:14px;font-weight:700;}
+.notif-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:4px;}
+.notif-list{flex:1;overflow-y:auto;padding:8px;}
+.notif-item{padding:14px 16px;border-radius:10px;margin-bottom:4px;border-left:3px solid transparent;transition:background 0.15s;}
+.notif-item:hover{background:rgba(255,255,255,0.03);}
+.notif-item.critical{border-left-color:var(--red);background:rgba(239,68,68,0.03);}
+.notif-item.warning{border-left-color:var(--orange);background:rgba(245,158,11,0.03);}
+.notif-item.info{border-left-color:var(--accent);background:rgba(0,112,243,0.03);}
+.notif-item-title{font-size:12px;font-weight:600;margin-bottom:2px;}
+.notif-item-desc{font-size:10px;color:var(--text-muted);line-height:1.5;}
+.notif-item-time{font-size:9px;color:var(--text-muted);margin-top:6px;}
+
+/* Sanctions Panel */
+.sanctions-item{padding:12px;border-radius:10px;background:rgba(239,68,68,0.03);border:1px solid rgba(239,68,68,0.08);margin-bottom:8px;}
+.sanctions-item.clear{background:rgba(0,112,243,0.03);border-color:rgba(0,112,243,0.08);}
+.sanctions-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.sanctions-status{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sanctions-status.flagged{background:var(--red);box-shadow:0 0 6px rgba(229,72,77,0.4);}
+.sanctions-status.clear{background:var(--green);box-shadow:0 0 6px rgba(0,112,243,0.4);}
+.sanctions-vessel{font-size:12px;font-weight:600;}
+.sanctions-detail{font-size:10px;color:var(--text-muted);line-height:1.5;}
+.sanctions-tags{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;}
+.sanctions-tag{font-size:8px;padding:2px 6px;border-radius:3px;font-weight:600;letter-spacing:0.3px;}
+.sanctions-tag.ofac{background:rgba(239,68,68,0.15);color:var(--red);}
+.sanctions-tag.eu{background:rgba(245,158,11,0.15);color:var(--orange);}
+.sanctions-tag.un{background:rgba(167,139,250,0.15);color:var(--purple);}
+
+/* Chokepoint Compare */
+.choke-compare{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.choke-compare-card{padding:14px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);text-align:center;}
+.choke-compare-card:hover{background:rgba(255,255,255,0.04);}
+.choke-compare-name{font-size:9px;font-weight:600;letter-spacing:0.5px;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;}
+.choke-compare-flow{font-size:20px;font-weight:700;margin-bottom:2px;}
+.choke-compare-unit{font-size:9px;color:var(--text-muted);}
+.choke-compare-status{display:inline-block;font-size:9px;font-weight:600;padding:3px 8px;border-radius:4px;margin-top:8px;}
+
+/* Glossary */
+.glossary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;padding:28px 32px 32px;}
+.glossary-col{padding:0 16px;}
+.glossary-cat-label{font-size:9px;font-weight:600;letter-spacing:0.8px;color:var(--accent-light);text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.glossary-row{display:flex;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.02);transition:background 0.15s;}
+.glossary-row:last-child{border-bottom:none;}
+.glossary-row:hover{background:rgba(255,255,255,0.02);margin:0 -8px;padding:5px 8px;border-radius:4px;}
+.glossary-term{font-size:11px;font-weight:700;color:var(--text-primary);min-width:48px;font-variant-numeric:tabular-nums;letter-spacing:-0.2px;flex-shrink:0;}
+.glossary-def{font-size:10px;color:var(--text-muted);line-height:1.4;}
+/* Section dividers */
+.section-divider{margin:40px 0 24px;padding-bottom:0;}
+.section-divider-title{font-size:24px;font-weight:700;color:var(--text-primary);letter-spacing:-0.5px;}
+.section-divider-line{height:1px;background:linear-gradient(90deg,rgba(255,255,255,0.08),transparent 80%);margin-top:12px;}
+body.light .section-divider-line{background:linear-gradient(90deg,rgba(0,0,0,0.08),transparent 80%);}
+/* Sanctions legal panel */
+.sanction-card{padding:14px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);margin-bottom:10px;transition:all 0.2s;}
+.sanction-card:hover{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);}
+.sanction-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.sanction-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sanction-dot.flagged{background:var(--red);box-shadow:0 0 6px rgba(229,72,77,0.4);}
+.sanction-dot.cleared{background:var(--green);box-shadow:0 0 6px rgba(69,165,87,0.4);}
+.sanction-vessel{font-size:13px;font-weight:600;color:var(--text-primary);}
+.sanction-desc{font-size:10px;color:var(--text-muted);line-height:1.5;margin-bottom:8px;}
+.sanction-tags{display:flex;gap:4px;flex-wrap:wrap;}
+.sanction-tag{font-size:8px;padding:3px 8px;border-radius:4px;font-weight:700;letter-spacing:0.3px;}
+.sanction-tag.ofac{background:rgba(239,68,68,0.15);color:var(--red);}
+.sanction-tag.eu{background:rgba(245,158,11,0.15);color:var(--orange);}
+.sanction-tag.un{background:rgba(142,78,198,0.15);color:var(--purple);}
+body.light .sanction-card{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.04);}
+body.light .sanction-card:hover{background:rgba(0,0,0,0.04);}
+body.light .glossary-cat-label{color:var(--accent);border-bottom-color:rgba(0,0,0,0.06);}
+body.light .glossary-row{border-bottom-color:rgba(0,0,0,0.03);}
+body.light .glossary-row:hover{background:rgba(0,0,0,0.02);}
+@media(max-width:900px){.glossary-grid{grid-template-columns:1fr;gap:16px;}}
+</style>
+</head>
+<body>
+
+<!-- Search Modal -->
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+  <div class="search-modal">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input class="search-input" id="searchInput" placeholder="Search vessels, companies, events..." oninput="performSearch(this.value)" autocomplete="off">
+    </div>
+    <div class="search-results" id="searchResults">
+      <div class="search-empty">Type to search across all intelligence data</div>
+    </div>
+    <div class="search-hint"><span>Navigate with <kbd>↑</kbd> <kbd>↓</kbd></span><span><kbd>ESC</kbd> to close</span></div>
+  </div>
+</div>
+
+<!-- Notification Panel -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-header">
+    <h3>Alerts & Notifications</h3>
+    <button class="notif-close" onclick="toggleNotif()">&times;</button>
+  </div>
+  <div class="notif-list" id="notifList"></div>
+</div>
+
+<div class="app">
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo-area">
+      <div class="sidebar-logo">HW</div>
+      <div class="sidebar-title">
+        <div class="sidebar-brand">Hormuz</div>
+        <div class="sidebar-subtitle">Watch</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Navigation -->
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Situation</div>
+    <button class="sidebar-btn active" onclick="switchView('main');navTo('sec-overview',this)">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="sidebar-btn-label">Situation Overview</span>
+    </button>
+    <button class="sidebar-btn" onclick="switchView('main');navTo('sec-map',this)">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="sidebar-btn-label">Operational Map</span>
+    </button>
+    <button class="sidebar-btn" onclick="switchView('main');navTo('sec-vessels',this)">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20l2-2h16l2 2"/><path d="M4 18V8l8-4 8 4v10"/></svg>
+      <span class="sidebar-btn-label">Vessel Tracking</span>
+      <span class="sidebar-badge count">19</span>
+    </button>
+    <button class="sidebar-btn" onclick="switchView('main');navTo('sec-military',this)">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span class="sidebar-btn-label">Military Disposition</span>
+    </button>
+  </div>
+
+  <!-- Intelligence Section -->
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Intelligence</div>
+    <button class="sidebar-btn" onclick="switchView('main');navTo('sec-energy',this)">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 10 10-12h-9l1-10z"/></svg>
+      <span class="sidebar-btn-label">Energy & Commodities</span>
+    </button>
+    <button class="sidebar-btn" onclick="switchView('main');navTo('sec-timeline',this)">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span class="sidebar-btn-label">Event Timeline</span>
+    </button>
+    <button class="sidebar-btn" onclick="switchView('main');navTo('sec-market',this)">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      <span class="sidebar-btn-label">Market</span>
+      <span class="sidebar-badge shortcut" style="background:rgba(239,68,68,0.15);color:var(--red);border-color:rgba(239,68,68,0.3);">Live</span>
+    </button>
+  </div>
+
+  <!-- Config Section -->
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">System</div>
+    <button class="sidebar-btn" onclick="openSearch()">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span class="sidebar-btn-label">Search</span>
+      <span class="sidebar-badge shortcut"><kbd style="font-size:9px;font-family:inherit;">⌘K</kbd></span>
+    </button>
+    <button class="sidebar-btn" onclick="switchView('apis',this)">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
+      <span class="sidebar-btn-label">Feeds & APIs</span>
+    </button>
+  </div>
+
+  <div class="sidebar-spacer"></div>
+
+  <!-- Theme Toggle -->
+  <div style="padding:4px 0;border-top:1px solid var(--card-border);">
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <svg class="sidebar-icon" id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <span class="sidebar-btn-label" id="themeLabel">Light Mode</span>
+      <div class="theme-toggle-track"><div class="theme-toggle-thumb"></div></div>
+    </button>
+  </div>
+
+  <!-- Bottom Section -->
+  <div class="sidebar-bottom">
+    <div class="sidebar-avatar">U</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name">User</div>
+      <div class="sidebar-user-role">Admin</div>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+<div class="header">
+  <h1>Hormuz Watch</h1>
+  <div class="header-right">
+    <span class="threat-pill">Threat: Critical</span>
+    <button class="notif-btn" onclick="toggleNotif()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div class="notif-badge-count" id="notifCount">7</div>
+    </button>
+    <div class="api-indicator"><span class="live-dot" id="wsStatusDot" style="background:var(--red)"></span><span id="wsLabel">AIS: Offline</span></div>
+    <span class="clock" id="liveTime"></span>
+  </div>
+</div>
+
+<div class="section-divider" id="sec-overview">
+  <div class="section-divider-title">Situation Overview</div>
+  <div class="section-divider-line"></div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-card glass"><div class="kpi-label">Vessels Hit</div><div class="kpi-value red">16+</div><div class="kpi-delta">Since Feb 28 — 92% traffic drop</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">Brent Crude</div><div class="kpi-value orange">$104</div><div class="kpi-delta">+49% from $70 (peak $126)</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">Crew Killed</div><div class="kpi-value red">7+</div><div class="kpi-delta">20+ injured, 6+ missing</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">VLCC Rate</div><div class="kpi-value orange">$424K</div><div class="kpi-delta">/day — all-time record</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">SPR Release</div><div class="kpi-value lime">400M</div><div class="kpi-delta">bbl — starts today, 120 days</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">War Risk</div><div class="kpi-value red">3.5%</div><div class="kpi-delta red">Open mkt — DFC-backed 1.5%</div></div>
+</div>
+
+<!-- ROW 1: Chokepoints + Bypass + Escort -->
+<div id="sec-dashboard" class="section-grid triple">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Global Chokepoint Status</span><span class="panel-badge red">Dual Blockade</span></div>
+    <div class="chokepoint-grid">
+      <div class="choke-card closed"><div class="choke-name">Strait of Hormuz</div><div class="choke-status">Closed</div><div class="choke-detail">IRGC blockade active. Mine threat. ~21 mb/d offline. Only Chinese-flagged vessels permitted.</div></div>
+      <div class="choke-card degraded"><div class="choke-name">Bab al-Mandab / Red Sea</div><div class="choke-status">Hostile</div><div class="choke-detail">Houthi drone swarms resumed. True Confidence struck, 3 killed. Most traffic diverted to Cape.</div></div>
+      <div class="choke-card open"><div class="choke-name">Suez Canal</div><div class="choke-status">Open</div><div class="choke-detail">Operating at reduced capacity. Diversions from Red Sea ongoing. Revenue down 40%.</div></div>
+    </div>
+  </div>
+
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Bypass Pipelines</span><span class="panel-badge orange">5.5 of 20 mb/d</span></div>
+    <div class="pipeline-item">
+      <div class="pipeline-icon">&#9783;</div>
+      <div class="pipeline-info"><div class="pipeline-name">East-West Pipeline (Petroline)</div><div class="pipeline-sub">Saudi: Abqaiq &#8594; Yanbu (Red Sea)</div><div class="pipeline-bar"><div class="pipeline-fill" style="width:64%;background:linear-gradient(90deg,#0070f3,#3291ff);"></div></div></div>
+      <div class="pipeline-capacity"><div class="pipeline-cap-val">4.5</div><div class="pipeline-cap-label">MB/D</div></div>
+    </div>
+    <div class="pipeline-item">
+      <div class="pipeline-icon">&#9783;</div>
+      <div class="pipeline-info"><div class="pipeline-name">ADCOP Pipeline</div><div class="pipeline-sub">UAE: Habshan &#8594; Fujairah (Arabian Sea)</div><div class="pipeline-bar"><div class="pipeline-fill" style="width:26%;background:linear-gradient(90deg,var(--cyan),#67e8f9);"></div></div></div>
+      <div class="pipeline-capacity"><div class="pipeline-cap-val">1.8</div><div class="pipeline-cap-label">MB/D</div></div>
+    </div>
+    <div class="alert-box red"><div class="alert-title">Deficit: ~14 mb/d</div><div class="alert-desc">Combined bypass 5.5 mb/d vs. 20 mb/d normal flow. Yanbu vulnerable to Houthi range. Iraq-Turkey pipeline offline since 2023.</div></div>
+  </div>
+
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Escort & Convoy Status</span><span class="panel-badge orange">Day 15</span></div>
+    <div class="escort-item"><div class="escort-dot pending"></div><div><div class="escort-title">Op Epic Escort — Planning</div><div class="escort-desc">Pentagon estimates 3–4 ships/day with 7–8 destroyers. Weeks away. Mine clearance prerequisite.</div></div></div>
+    <div class="escort-item"><div class="escort-dot pending"></div><div><div class="escort-title">Trump Coalition Call</div><div class="escort-desc">Named China, France, Japan, South Korea, UK. No firm commitments yet. France pledged 2 frigates. UK "considering options."</div></div></div>
+    <div class="escort-item"><div class="escort-dot active"></div><div><div class="escort-title">Mine Clearance (MCM)</div><div class="escort-desc">USS Gladiator group. 4nm corridor cleared. 12+ mines neutralized. Iran retains 80–90% mine-laying capacity. <span style="color:var(--orange);font-weight:600;">4–8 weeks to clear.</span></div></div></div>
+    <div class="escort-item"><div class="escort-dot pending"></div><div><div class="escort-title">USS Tripoli (LHA-7) En Route</div><div class="escort-desc">2,500 Marines (31st MEU) + 2,500 sailors. Requested by CENTCOM, approved by Hegseth.</div></div></div>
+    <div class="escort-item"><div class="escort-dot blocked"></div><div><div class="escort-title">Commercial Convoy</div><div class="escort-desc">No escorts operating. 150+ vessels anchored awaiting safe passage.</div></div></div>
+    <div class="escort-item"><div class="escort-dot active"></div><div><div class="escort-title">China Exception</div><div class="escort-desc">Iran allows Chinese-flagged/chartered vessels. Self-declared ownership signals.</div></div></div>
+  </div>
+</div>
+
+<!-- ROW 1B: Global Chokepoint Comparison + Sanctions Tracker -->
+<div class="section-grid">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Global Chokepoint Comparison</span><span class="panel-badge purple">4 Straits</span></div>
+    <div class="choke-compare">
+      <div class="choke-compare-card">
+        <div class="choke-compare-name">Hormuz</div>
+        <div class="choke-compare-flow" style="color:var(--red);">0.2</div>
+        <div class="choke-compare-unit">mb/d (was 20)</div>
+        <div class="choke-compare-status" style="background:rgba(239,68,68,0.15);color:var(--red);">CLOSED</div>
+      </div>
+      <div class="choke-compare-card">
+        <div class="choke-compare-name">Bab el-Mandeb</div>
+        <div class="choke-compare-flow" style="color:var(--orange);">3.1</div>
+        <div class="choke-compare-unit">mb/d (was 6.2)</div>
+        <div class="choke-compare-status" style="background:rgba(245,158,11,0.15);color:var(--orange);">HOSTILE</div>
+      </div>
+      <div class="choke-compare-card">
+        <div class="choke-compare-name">Suez Canal</div>
+        <div class="choke-compare-flow" style="color:var(--orange);">4.8</div>
+        <div class="choke-compare-unit">mb/d (was 5.5)</div>
+        <div class="choke-compare-status" style="background:rgba(245,158,11,0.15);color:var(--orange);">DEGRADED</div>
+      </div>
+      <div class="choke-compare-card">
+        <div class="choke-compare-name">Malacca</div>
+        <div class="choke-compare-flow" style="color:var(--green);">16.0</div>
+        <div class="choke-compare-unit">mb/d (normal)</div>
+        <div class="choke-compare-status" style="background:rgba(69,165,87,0.15);color:var(--green);">OPEN</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:10px;color:var(--text-muted);line-height:1.6;">Combined disruption: ~28.5 mb/d capacity affected across Hormuz + Red Sea. Suez traffic down 13% from Houthi spillover. Malacca unaffected but at capacity.</div>
+  </div>
+
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Sanctions & Blacklist Tracker</span><span class="panel-badge red">7 Flagged</span></div>
+    <div style="max-height:280px;overflow-y:auto;">
+      <div class="sanctions-item">
+        <div class="sanctions-head"><div class="sanctions-status flagged"></div><span class="sanctions-vessel">Athe Nova</span></div>
+        <div class="sanctions-detail">Iran-linked operator. Vessel identified transiting under sanctions evasion. AIS transponder spoofed.</div>
+        <div class="sanctions-tags"><span class="sanctions-tag ofac">OFAC SDN</span><span class="sanctions-tag eu">EU LIST</span></div>
+      </div>
+      <div class="sanctions-item">
+        <div class="sanctions-head"><div class="sanctions-status flagged"></div><span class="sanctions-vessel">Skylight</span></div>
+        <div class="sanctions-detail">Panama-flagged, sanctioned entity. Attacked Mar 1 while attempting transit.</div>
+        <div class="sanctions-tags"><span class="sanctions-tag ofac">OFAC SDN</span></div>
+      </div>
+      <div class="sanctions-item">
+        <div class="sanctions-head"><div class="sanctions-status flagged"></div><span class="sanctions-vessel">Unknown Dec Tanker</span></div>
+        <div class="sanctions-detail">Seized Dec 26. Flag unknown. Suspected sanctions-busting oil transfer. 16 crew detained.</div>
+        <div class="sanctions-tags"><span class="sanctions-tag ofac">OFAC</span><span class="sanctions-tag un">UN RES</span></div>
+      </div>
+      <div class="sanctions-item">
+        <div class="sanctions-head"><div class="sanctions-status flagged"></div><span class="sanctions-vessel">Shadow Fleet (4 vessels)</span></div>
+        <div class="sanctions-detail">Dark fleet tankers detected with AIS off in Hormuz approach. Ship-to-ship transfers suspected near Fujairah.</div>
+        <div class="sanctions-tags"><span class="sanctions-tag ofac">OFAC</span><span class="sanctions-tag eu">EU</span><span class="sanctions-tag un">UN RES</span></div>
+      </div>
+      <div class="sanctions-item clear">
+        <div class="sanctions-head"><div class="sanctions-status clear"></div><span class="sanctions-vessel">Iron Maiden</span></div>
+        <div class="sanctions-detail">Chinese-owned. Cleared sanctions check. Transited Mar 5 under Iran-China exception.</div>
+        <div class="sanctions-tags"><span class="sanctions-tag" style="background:rgba(0,112,243,0.15);color:var(--green);">CLEARED</span></div>
+      </div>
+      <div class="sanctions-item clear">
+        <div class="sanctions-head"><div class="sanctions-status clear"></div><span class="sanctions-vessel">Stena Imperative</span></div>
+        <div class="sanctions-detail">US-flagged. Stena Bulk. Cleared all checks. Attacked near Bahrain despite clean status.</div>
+        <div class="sanctions-tags"><span class="sanctions-tag" style="background:rgba(0,112,243,0.15);color:var(--green);">CLEARED</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider" id="sec-map">
+  <div class="section-divider-title">Operational Map</div>
+  <div class="section-divider-line"></div>
+</div>
+
+<div style="margin-bottom:20px;">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Operational Map</span><span class="panel-badge">Live</span></div>
+    <div class="map-wrap">
+      <svg class="map-svg" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="blueGlow" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="transparent"/><stop offset="50%" stop-color="#0070f3"/><stop offset="100%" stop-color="transparent"/></linearGradient>
+          <radialGradient id="seaGrad" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0d2137" stop-opacity="1"/><stop offset="100%" stop-color="#060d1a" stop-opacity="1"/></radialGradient>
+        </defs>
+        <!-- Ocean background - radial gradient -->
+        <rect width="800" height="400" fill="url(#seaGrad)"/>
+        <!-- Subtle water texture grid -->
+        <g stroke="rgba(0,112,243,0.04)" stroke-width="0.5"><line x1="0" y1="80" x2="800" y2="80"/><line x1="0" y1="160" x2="800" y2="160"/><line x1="0" y1="240" x2="800" y2="240"/><line x1="0" y1="320" x2="800" y2="320"/><line x1="160" y1="0" x2="160" y2="400"/><line x1="320" y1="0" x2="320" y2="400"/><line x1="480" y1="0" x2="480" y2="400"/><line x1="640" y1="0" x2="640" y2="400"/></g>
+
+        <!-- Iran (north landmass) -->
+        <path d="M0,0 L800,0 L800,100 L750,95 L700,105 L650,90 L600,100 L560,120 L530,140 L500,155 L470,160 L440,150 L410,140 L380,135 L350,140 L320,150 L290,160 L250,155 L210,145 L170,140 L130,135 L90,130 L50,125 L0,120 Z" fill="#1a2232" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+        <!-- Oman/UAE (south landmass) -->
+        <path d="M350,400 L800,400 L800,250 L750,255 L720,260 L690,270 L660,280 L630,275 L600,265 L570,260 L540,270 L510,285 L490,295 L470,300 L440,290 L420,285 L400,290 L380,300 L360,310 L350,320 Z" fill="#1e1a14" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+        <!-- Qatar peninsula -->
+        <path d="M180,360 L190,320 L200,310 L210,320 L220,360" fill="#1e1a14" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+        <!-- Saudi Arabia western -->
+        <path d="M0,400 L0,200 L50,210 L100,220 L140,240 L160,260 L170,300 L175,340 L180,360 L170,400 Z" fill="#1e1a14" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+
+        <!-- Strait danger zone -->
+        <path d="M380,155 Q420,175 460,178 Q500,180 530,175 Q560,168 590,160" fill="none" stroke="rgba(229,72,77,0.35)" stroke-width="10" stroke-linecap="round"/>
+        <path d="M380,155 Q420,175 460,178 Q500,180 530,175 Q560,168 590,160" fill="none" stroke="rgba(229,72,77,0.7)" stroke-width="1" stroke-dasharray="6,4" stroke-linecap="round"/>
+        <!-- Shipping lanes -->
+        <path d="M50,230 Q200,220 350,200 Q430,185 500,175 Q600,170 750,185" stroke="rgba(0,112,243,0.08)" stroke-width="14" fill="none" stroke-linecap="round"/>
+        <path d="M50,230 Q200,220 350,200 Q430,185 500,175 Q600,170 750,185" stroke="rgba(0,112,243,0.04)" stroke-width="2" fill="none" stroke-dasharray="6,4"/>
+
+        <!-- Animated shipping route arc -->
+        <path d="M50,230 Q200,130 400,180 Q500,210 750,165" fill="none" stroke="rgba(0,112,243,0.1)" stroke-width="1.5" stroke-dasharray="4,6"/>
+        <path d="M50,230 Q200,130 400,180 Q500,210 750,165" fill="none" stroke="url(#blueGlow)" stroke-width="2" stroke-dasharray="60,600" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" values="0;-660" dur="4s" repeatCount="indefinite"/></path>
+        <circle r="3" fill="#0070f3"><animateMotion dur="4s" repeatCount="indefinite" path="M50,230 Q200,130 400,180 Q500,210 750,165"/></circle>
+        <circle r="8" fill="rgba(0,112,243,0.2)"><animateMotion dur="4s" repeatCount="indefinite" path="M50,230 Q200,130 400,180 Q500,210 750,165"/></circle>
+
+        <!-- Country labels -->
+        <text x="340" y="55" text-anchor="middle" fill="rgba(255,255,255,0.25)" font-size="11" font-weight="600" letter-spacing="2" font-family="Geist,sans-serif">I R A N</text>
+        <text x="580" y="370" fill="rgba(255,255,255,0.2)" font-size="10" font-weight="600" letter-spacing="2" font-family="Geist,sans-serif">OMAN</text>
+        <text x="480" y="335" fill="rgba(255,255,255,0.15)" font-size="9" letter-spacing="2" font-family="Geist,sans-serif">UAE</text>
+        <text x="195" y="348" fill="rgba(255,255,255,0.12)" font-size="8" letter-spacing="1" text-anchor="middle" font-family="Geist,sans-serif">QATAR</text>
+        <text x="80" y="340" fill="rgba(255,255,255,0.1)" font-size="8" letter-spacing="1" text-anchor="middle" font-family="Geist,sans-serif">SAUDI ARABIA</text>
+        <!-- City markers -->
+        <circle cx="160" cy="290" r="2" fill="rgba(255,255,255,0.3)"/><text x="160" y="283" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="7" font-family="Geist,sans-serif">BAHRAIN</text>
+        <circle cx="280" cy="275" r="2" fill="rgba(255,255,255,0.25)"/><text x="280" y="268" text-anchor="middle" fill="rgba(255,255,255,0.15)" font-size="6" font-family="Geist,sans-serif">DOHA</text>
+        <circle cx="590" cy="230" r="2" fill="rgba(255,255,255,0.25)"/><text x="590" y="223" text-anchor="middle" fill="rgba(255,255,255,0.15)" font-size="6" font-family="Geist,sans-serif">MUSCAT</text>
+        <!-- Strait label -->
+        <text x="480" y="205" fill="rgba(229,72,77,0.6)" font-size="9" letter-spacing="3" text-anchor="middle" transform="rotate(-12,480,205)" font-family="Geist,sans-serif" font-weight="700">STRAIT OF HORMUZ</text>
+        <text x="480" y="217" fill="rgba(229,72,77,0.4)" font-size="8" letter-spacing="1" text-anchor="middle" transform="rotate(-12,480,217)" font-family="Geist,sans-serif">CLOSED</text>
+        <text x="200" y="235" fill="rgba(0,112,243,0.12)" font-size="12" letter-spacing="6" text-anchor="middle" font-family="Geist,sans-serif">PERSIAN GULF</text>
+        <text x="700" y="145" fill="rgba(0,112,243,0.1)" font-size="9" letter-spacing="3" font-family="Geist,sans-serif">GULF OF OMAN</text>
+        <!-- Mine field area -->
+        <g filter="url(#glow)">
+          <circle cx="460" cy="180" r="3" fill="none" stroke="var(--red)" stroke-width="1" opacity="0.4"><animate attributeName="r" values="3;6;3" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="480" cy="175" r="3" fill="none" stroke="var(--red)" stroke-width="1" opacity="0.4"><animate attributeName="r" values="3;6;3" dur="2.3s" repeatCount="indefinite"/></circle>
+          <circle cx="470" cy="190" r="3" fill="none" stroke="var(--red)" stroke-width="1" opacity="0.4"><animate attributeName="r" values="3;6;3" dur="1.8s" repeatCount="indefinite"/></circle>
+          <circle cx="450" cy="188" r="3" fill="none" stroke="var(--red)" stroke-width="1" opacity="0.3"><animate attributeName="r" values="3;6;3" dur="2.5s" repeatCount="indefinite"/></circle>
+        </g>
+        <g class="map-marker" data-title="IRGC Mine Field" data-desc="Naval mines deployed across shipping lanes. USS Gladiator MCM group clearing 4nm corridor. 40% swept. 12+ mines neutralized." data-status="DANGER" data-color="var(--red)">
+          <rect x="420" y="148" width="100" height="32" rx="4" fill="rgba(229,72,77,0.06)" stroke="rgba(229,72,77,0.25)" stroke-width="0.5" stroke-dasharray="4,4" style="cursor:pointer;"/>
+          <text x="470" y="162" text-anchor="middle" fill="var(--red)" font-size="7" font-weight="700" font-family="Geist,sans-serif">MINE FIELD</text>
+          <text x="470" y="174" text-anchor="middle" fill="rgba(229,72,77,0.5)" font-size="6" font-family="Geist,sans-serif">40% CLEARED</text>
+        </g>
+
+        <!-- Attack incidents -->
+        <g class="map-marker" data-title="Basra Port Attack" data-desc="Drone boat attack on oil tankers. 1+ killed. 2 vessels damaged. Mar 11." data-status="ATTACKED" data-color="var(--red)">
+          <circle cx="30" cy="165" r="5" fill="rgba(229,72,77,0.15)" stroke="var(--red)" stroke-width="1" class="marker-ring"><animate attributeName="r" values="4;8;4" dur="2.6s" repeatCount="indefinite"/></circle>
+          <circle cx="30" cy="165" r="2" fill="var(--red)"/>
+          <text x="42" y="162" fill="rgba(255,255,255,0.25)" font-size="7" font-family="Geist,sans-serif">BASRA</text>
+        </g>
+        <g class="map-marker" data-title="MKD Vyom — Attacked" data-desc="Marshall Is. crude tanker. Mercuria (charterer). 1 killed by projectile off Oman. Mar 1." data-status="ATTACKED" data-color="var(--red)">
+          <circle cx="620" cy="230" r="5" fill="rgba(229,72,77,0.15)" stroke="var(--red)" stroke-width="1" class="marker-ring"><animate attributeName="r" values="4;8;4" dur="2.2s" repeatCount="indefinite"/></circle>
+          <circle cx="620" cy="230" r="2" fill="var(--red)"/>
+        </g>
+        <g class="map-marker" data-title="PRIMA — Drone Strike" data-desc="Malta-flagged chemicals tanker. Kyotonia Ltd / Argo Trading. IRGC claimed responsibility. Mar 7." data-status="ATTACKED" data-color="var(--red)">
+          <circle cx="490" cy="180" r="5" fill="rgba(229,72,77,0.15)" stroke="var(--red)" stroke-width="1" class="marker-ring"><animate attributeName="r" values="4;8;4" dur="2.5s" repeatCount="indefinite"/></circle>
+          <circle cx="490" cy="180" r="2" fill="var(--red)"/>
+        </g>
+        <g class="map-marker" data-title="Stena Imperative — Attacked" data-desc="US-flagged tanker. Stena Bulk. 1 killed, 2 injured near Bahrain. Mar 2." data-status="ATTACKED" data-color="var(--red)">
+          <circle cx="155" cy="290" r="5" fill="rgba(229,72,77,0.15)" stroke="var(--red)" stroke-width="1" class="marker-ring"><animate attributeName="r" values="4;8;4" dur="3s" repeatCount="indefinite"/></circle>
+          <circle cx="155" cy="290" r="2" fill="var(--red)"/>
+        </g>
+        <g class="map-marker" data-title="Sonangol Namibe — Struck" data-desc="Panama-flagged. Sonangol (Angola). Hit at Kuwait anchorage. Mar 8." data-status="ATTACKED" data-color="var(--red)">
+          <circle cx="580" cy="210" r="5" fill="rgba(229,72,77,0.15)" stroke="var(--red)" stroke-width="1" class="marker-ring"><animate attributeName="r" values="4;8;4" dur="3.2s" repeatCount="indefinite"/></circle>
+          <circle cx="580" cy="210" r="2" fill="var(--red)"/>
+        </g>
+
+        <!-- Sunk marker -->
+        <g class="map-marker" data-title="Musaffah 2 — Sunk" data-desc="UAE tugboat. Sunk by IRGC fire. Mar 5." data-status="SUNK" data-color="var(--orange)">
+          <circle cx="465" cy="195" r="5" fill="rgba(245,166,35,0.15)" stroke="var(--orange)" stroke-width="1" class="marker-ring"><animate attributeName="r" values="4;8;4" dur="2.8s" repeatCount="indefinite"/></circle>
+          <text x="465" y="198" text-anchor="middle" fill="var(--orange)" font-size="7" font-weight="700" style="pointer-events:none;">X</text>
+        </g>
+
+        <!-- Transit marker -->
+        <g class="map-marker" data-title="Iron Maiden — Transited" data-desc="Chinese bulk carrier. Cetus Maritime Shanghai. Signalled Chinese ownership. Allowed through under Iran-China exception. Mar 5." data-status="TRANSITED" data-color="var(--green)">
+          <circle cx="500" cy="170" r="4" fill="rgba(69,165,87,0.15)" stroke="var(--green)" stroke-width="1"/>
+          <polygon points="500,166 503,172 497,172" fill="var(--green)" style="pointer-events:none;"/>
+        </g>
+
+        <!-- USN carrier group -->
+        <g class="map-marker" data-title="USS Abraham Lincoln (CVN-72)" data-desc="CSG-3 Carrier Strike Group. F-35C, F/A-18E/F. Shot down Shahed-139 drone. Operating in Arabian Sea." data-status="USN" data-color="var(--accent)">
+          <rect x="674" y="183" width="56" height="17" rx="4" fill="rgba(0,112,243,0.12)" stroke="var(--accent)" stroke-width="0.5" style="cursor:pointer;"/>
+          <text x="702" y="195" text-anchor="middle" fill="var(--accent)" font-size="7" font-weight="600" font-family="Geist,sans-serif">CVN-72</text>
+        </g>
+
+        <!-- Anchored fleet -->
+        <g class="map-marker" data-title="150+ Vessels Anchored" data-desc="Commercial fleet awaiting escort convoy. Lloyd's ready to insure escorted transits. Pentagon says weeks from readiness." data-status="WAITING" data-color="var(--purple)">
+          <rect x="636" y="240" width="88" height="28" rx="4" fill="rgba(142,78,198,0.06)" stroke="var(--purple)" stroke-width="0.5" stroke-dasharray="3,3" style="cursor:pointer;"/>
+          <text x="680" y="253" text-anchor="middle" fill="var(--purple)" font-size="7" font-weight="600" font-family="Geist,sans-serif">150+ ANCHORED</text>
+          <text x="680" y="263" text-anchor="middle" fill="rgba(255,255,255,0.12)" font-size="6" font-family="Geist,sans-serif">AWAITING ESCORT</text>
+        </g>
+      </svg>
+      <div class="map-legend">
+        <div class="map-legend-item"><div class="legend-dot" style="background:var(--red)"></div>Attack</div>
+        <div class="map-legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Sunk</div>
+        <div class="map-legend-item"><div class="legend-dot" style="background:var(--green)"></div>Transit</div>
+        <div class="map-legend-item"><div class="legend-dot" style="background:var(--accent)"></div>USN</div>
+        <div class="map-legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Anchored</div>
+        <div class="map-legend-item"><div class="legend-dot" style="background:var(--red);opacity:0.5"></div>Mines</div>
+      </div>
+      <div class="map-tooltip" id="mapTooltip">
+        <div class="map-tooltip-title" id="ttTitle"></div>
+        <div class="map-tooltip-desc" id="ttDesc"></div>
+        <div class="map-tooltip-status" id="ttStatus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider" id="sec-vessels">
+  <div class="section-divider-title">Vessel Tracking</div>
+  <div class="section-divider-line"></div>
+</div>
+
+<div style="margin-bottom:20px;">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Vessel Incidents & Ownership</span><span class="panel-badge" id="vesselCount">16 Vessels</span></div>
+    <div class="tabs"><button class="tab-btn active" onclick="switchVesselZone(this,'hormuz')">Hormuz</button><button class="tab-btn" onclick="switchVesselZone(this,'redsea')">Red Sea</button></div>
+    <div class="filters" id="hormuzFilters"><button class="filter-pill active" onclick="filterVessels('all',this)">All</button><button class="filter-pill" onclick="filterVessels('attacked',this)">Attacked</button><button class="filter-pill" onclick="filterVessels('seized',this)">Seized</button><button class="filter-pill" onclick="filterVessels('transited',this)">Transited</button><button class="filter-pill" onclick="filterVessels('sunk',this)">Sunk</button></div>
+    <div style="max-height:400px;overflow-y:auto;"><table class="vessel-table"><thead><tr><th>Date</th><th>Vessel</th><th>Flag</th><th>Type</th><th>Owner / Operator</th><th>Status</th><th>Source</th></tr></thead><tbody id="vesselBody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- SECTION: Military Disposition -->
+<div class="section-divider" id="sec-military">
+  <div class="section-divider-title">Military Disposition</div>
+  <div class="section-divider-line"></div>
+</div>
+
+<div class="section-grid">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Military Force Disposition</span><span class="panel-badge">Force Tracker</span></div>
+    <div class="section-label">US / Coalition</div>
+    <div style="max-height:520px;overflow-y:auto;">
+      <div class="mil-item"><div class="mil-icon">&#9875;</div><div><div class="mil-name">CSG-3 — USS Abraham Lincoln (CVN-72)</div><div class="mil-desc">Arabian Sea. F-35C, F/A-18E/F. Shot down Shahed-139. IRGC claims hit (US denied).</div></div></div>
+      <div class="mil-item"><div class="mil-icon">&#9875;</div><div><div class="mil-name">CSG-12 — USS Gerald R. Ford (CVN-78)</div><div class="mil-desc">Eastern Med / Red Sea. Supporting strikes and Red Sea security.</div></div></div>
+      <div class="mil-item"><div class="mil-icon">&#9875;</div><div><div class="mil-name">USS McFaul (DDG-74)</div><div class="mil-desc">Guided-missile destroyer. Escorted Stena Imperative from IRGC intercept.</div></div></div>
+      <div class="mil-item"><div class="mil-icon">&#9875;</div><div><div class="mil-name">Mine Countermeasure Squadron</div><div class="mil-desc">USS Gladiator group. 4nm corridor cleared. 12+ mines neutralized. Full clearance: 4–8 weeks.</div></div></div>
+      <div class="mil-item"><div class="mil-icon">&#9875;</div><div><div class="mil-name">USS Tripoli (LHA-7) + 31st MEU</div><div class="mil-desc">En route to Gulf. 2,500 Marines + 2,500 sailors. Ordered Mar 14 by SecDef Hegseth.</div></div></div>
+      <div class="mil-item"><div class="mil-icon">&#9875;</div><div><div class="mil-name">USAF B-52H Stratofortress</div><div class="mil-desc">Diego Garcia. Strategic deterrence posture. Ready for standoff strike.</div></div></div>
+      <div class="section-label" style="margin-top:10px;">Coalition</div>
+      <div class="mil-item"><div class="mil-icon">&#127467;&#127479;</div><div><div class="mil-name">France — Op Aspides (2 Frigates)</div><div class="mil-desc">Pledged escort mission for merchant ships. "Purely defensive." Macron: reopen strait once fighting subsides.</div></div></div>
+      <div class="mil-item"><div class="mil-icon">&#127468;&#127463;</div><div><div class="mil-name">UK — "Discussing options"</div><div class="mil-desc">No confirmation yet. Trump named UK among countries expected to contribute warships.</div></div></div>
+      <div class="section-label" style="margin-top:10px;">IRGC Naval Forces</div>
+      <div class="mil-item"><div class="mil-icon iran">&#9888;</div><div><div class="mil-name">IRGC Fast Attack Craft</div><div class="mil-desc">Swarm boats across strait. Vessel seizures and drone boat attacks.</div></div></div>
+      <div class="mil-item"><div class="mil-icon iran">&#9888;</div><div><div class="mil-name">IRGC Drone Fleet</div><div class="mil-desc">Shahed-136/139. Struck PRIMA, targeted CVN-72.</div></div></div>
+      <div class="mil-item"><div class="mil-icon iran">&#9888;</div><div><div class="mil-name">Noor Missile Systems</div><div class="mil-desc">Anti-ship missiles. Deployed to coastal batteries along strait.</div></div></div>
+      <div class="mil-item"><div class="mil-icon iran">&#9888;</div><div><div class="mil-name">Mine-laying Operations</div><div class="mil-desc">Naval mines in shipping lanes. Iran retains 80–90% of minelayers. Could lay hundreds more.</div></div></div>
+    </div>
+  </div>
+
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Sanctions & Legal</span><span class="panel-badge red">OFAC</span></div>
+    <div style="max-height:520px;overflow-y:auto;">
+      <div class="sanction-card">
+        <div class="sanction-head"><div class="sanction-dot flagged"></div><span class="sanction-vessel">Skylight (Palau)</span></div>
+        <div class="sanction-desc">Operated by sanctioned entity. OFAC-designated. Attacked while in violation.</div>
+        <div class="sanction-tags"><span class="sanction-tag ofac">OFAC</span><span class="sanction-tag un">UN</span></div>
+      </div>
+      <div class="sanction-card">
+        <div class="sanction-head"><div class="sanction-dot flagged"></div><span class="sanction-vessel">Athe Nova (Honduras)</span></div>
+        <div class="sanction-desc">Iran-linked operator. EU, UK, UN sanctioned. Escaped to Iranian waters.</div>
+        <div class="sanction-tags"><span class="sanction-tag ofac">OFAC</span><span class="sanction-tag eu">EU</span><span class="sanction-tag un">UN</span></div>
+      </div>
+      <div class="sanction-card">
+        <div class="sanction-head"><div class="sanction-dot flagged"></div><span class="sanction-vessel">Shadow Fleet (4 vessels)</span></div>
+        <div class="sanction-desc">Dark fleet tankers detected with AIS off. Ship-to-ship transfers near Fujairah.</div>
+        <div class="sanction-tags"><span class="sanction-tag ofac">OFAC</span><span class="sanction-tag eu">EU</span><span class="sanction-tag un">UN</span></div>
+      </div>
+      <div class="sanction-card">
+        <div class="sanction-head"><div class="sanction-dot cleared"></div><span class="sanction-vessel">Iron Maiden (Marshall Is.)</span></div>
+        <div class="sanction-desc">Chinese owner. No active sanctions. Used China exception.</div>
+        <div class="sanction-tags"></div>
+      </div>
+      <div class="sanction-card">
+        <div class="sanction-head"><div class="sanction-dot cleared"></div><span class="sanction-vessel">Stena Imperative (US)</span></div>
+        <div class="sanction-desc">US-flagged. Clean record. Targeted for flag state, not ownership.</div>
+        <div class="sanction-tags"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION: Energy & Commodities -->
+<div class="section-divider" id="sec-energy">
+  <div class="section-divider-title">Energy & Commodities</div>
+  <div class="section-divider-line"></div>
+</div>
+
+<div class="section-grid">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">LNG Supply — Qatar Offline</span><span class="panel-badge red">77 MT/yr offline</span></div>
+    <div class="chart-wrap short"><canvas id="lngChart"></canvas></div>
+    <div class="alert-box red" style="margin-top:10px;"><div class="alert-title">QatarEnergy Halt</div><div class="alert-desc">All LNG production suspended. Qatar produces 77 MT/yr — 22% of global LNG. European spot prices up 340%.</div></div>
+  </div>
+
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Strategic Petroleum Reserves</span><span class="panel-badge red">400M bbl released</span></div>
+    <div id="sprBars"></div>
+  </div>
+</div>
+
+<div class="section-grid">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">War Risk Insurance</span><span class="panel-badge orange">Extreme Pricing</span></div>
+    <div class="chart-wrap short"><canvas id="insuranceChart"></canvas></div>
+    <div class="alert-box blue"><div class="alert-title">Chubb / DFC $20B Facility Live — Mar 11</div><div class="alert-desc">Chubb named lead underwriter for DFC-backed $20B reinsurance facility. Policies tied to naval escort. Open market 2.5–3.5% hull; US/UK/IL-nexus vessels quoted 5%+. High-risk propositions at 7.5–10%. Lloyd's confirms cover available but at extreme pricing.</div></div>
+  </div>
+
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Transit & Oil Analytics</span><span class="panel-badge">Multi-Source</span></div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchAnalytics(this,'traffic')">Traffic</button>
+      <button class="tab-btn" onclick="switchAnalytics(this,'oil')">Oil</button>
+      <button class="tab-btn" onclick="switchAnalytics(this,'countries')">Export</button>
+      <button class="tab-btn" onclick="switchAnalytics(this,'companies')">Companies</button>
+    </div>
+    <div id="analytics-traffic"><div class="chart-wrap short"><canvas id="transitChart"></canvas></div></div>
+    <div id="analytics-oil" style="display:none"><div class="chart-wrap short"><canvas id="oilChart"></canvas></div></div>
+    <div id="analytics-countries" style="display:none"><div id="countryBars"></div></div>
+    <div id="analytics-companies" style="display:none"><div class="entity-grid" id="companyGrid"></div></div>
+  </div>
+</div>
+
+<!-- Oil Export Dependency (full width) -->
+<div style="margin-bottom:20px;">
+  <div id="sec-intel" class="panel glass">
+    <div class="panel-head"><span class="panel-title">Oil Export Dependency by Country</span><span class="panel-badge red">84% to Asia</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;" id="depContainer"></div>
+  </div>
+</div>
+
+<!-- SECTION: Timeline -->
+<div class="section-divider" id="sec-timeline">
+  <div class="section-divider-title">Event Timeline</div>
+  <div class="section-divider-line"></div>
+</div>
+
+<div class="section-grid">
+  <div class="panel glass" style="max-height:500px;overflow-y:auto;">
+    <div class="panel-head"><span class="panel-title">Crisis Chronology</span><span class="panel-badge">Since Nov 2025</span></div>
+    <div class="timeline" id="timelineContainer"></div>
+  </div>
+
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Crew & Humanitarian</span><span class="panel-badge red">Casualties</span></div>
+    <div class="cas-grid">
+      <div class="cas-card"><div class="cas-num" style="color:var(--red);">7+</div><div class="cas-label">Killed at Sea</div></div>
+      <div class="cas-card"><div class="cas-num" style="color:var(--orange);">20+</div><div class="cas-label">Injured</div></div>
+      <div class="cas-card"><div class="cas-num" style="color:var(--purple);">6+</div><div class="cas-label">Missing</div></div>
+      <div class="cas-card"><div class="cas-num" style="color:var(--red);">1</div><div class="cas-label">Vessel Sunk</div></div>
+    </div>
+    <div style="margin-top:12px;font-size:10px;color:var(--text-secondary);line-height:1.6;">
+      <div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:6px 0;"><span style="color:var(--red);font-weight:600;">Skylight</span> — 2 killed, 3 injured (Indian crew, off Khasab)</div>
+      <div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:6px 0;"><span style="color:var(--red);font-weight:600;">MKD Vyom</span> — 1 killed (Indian sailor, drone boat off Oman)</div>
+      <div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:6px 0;"><span style="color:var(--red);font-weight:600;">Stena Imperative</span> — 1 port worker killed, 2 injured (Bahrain)</div>
+      <div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:6px 0;"><span style="color:var(--red);font-weight:600;">Musaffah 2</span> — 3 Indonesian crew missing (sunk)</div>
+      <div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:6px 0;"><span style="color:var(--red);font-weight:600;">Mayuree Naree</span> — 20 rescued, 3 missing (Thai crew)</div>
+      <div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:6px 0;"><span style="color:var(--red);font-weight:600;">Basra tankers</span> — 1+ killed in drone boat attack on Safesea Vishnu & Zefyros</div>
+      <div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:6px 0;"><span style="color:var(--red);font-weight:600;">True Confidence</span> — 3 killed, 4 burned (Red Sea, Houthi)</div>
+      <div style="padding:6px 0;"><span style="color:var(--text-secondary);font-weight:600;">Dec Seizure</span> — 16 crew detained by IRGC</div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION: Market -->
+<div class="section-divider" id="sec-market">
+  <div class="section-divider-title">Market</div>
+  <div class="section-divider-line"></div>
+</div>
+
+<div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
+  <div class="kpi-card glass"><div class="kpi-label">Brent Crude</div><div class="kpi-value" style="color:var(--green);">$104.37</div><div class="kpi-delta" style="color:var(--green);">+49% since crisis (peak $126)</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">VLCC Rate</div><div class="kpi-value" style="color:var(--green);">$424K/d</div><div class="kpi-delta">All-time record. Was $2.50/bbl, now $20/bbl</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">Defense Sector</div><div class="kpi-value" style="color:var(--green);">+15%</div><div class="kpi-delta">LMT +14.9%, NOC +10.9%</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">Container Rates</div><div class="kpi-value" style="color:var(--red);">+30%</div><div class="kpi-delta">Maersk surcharge from Mar 25</div></div>
+</div>
+
+<div class="section-grid">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Oil & Energy</span><span class="panel-badge green">Winners</span></div>
+    <div id="stocksOilTable"></div>
+  </div>
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Shipping & Tankers</span><span class="panel-badge">Mixed</span></div>
+    <div id="stocksShippingTable"></div>
+  </div>
+</div>
+
+<div class="section-grid">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Defense & Aerospace</span><span class="panel-badge green">Winners</span></div>
+    <div id="stocksDefenseTable"></div>
+  </div>
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Insurance & Exposed</span><span class="panel-badge red">Losers</span></div>
+    <div id="stocksLosersTable"></div>
+  </div>
+</div>
+
+<div class="section-grid">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Fertilizer & Commodities</span><span class="panel-badge orange">Volatile</span></div>
+    <div id="stocksCommoditiesTable"></div>
+  </div>
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Sector Performance</span><span class="panel-badge purple">Since Crisis</span></div>
+    <div style="position:relative;height:260px;">
+      <canvas id="sectorChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Glossary -->
+<div class="panel glass" style="margin-top:8px;">
+  <div class="panel-head" style="cursor:pointer;margin-bottom:0;" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.glossary-chevron').style.transform=b.style.display==='none'?'rotate(0)':'rotate(90deg)';">
+    <span class="panel-title">Glossary & Acronyms</span>
+    <svg class="glossary-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);transition:transform 0.2s;"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="glossary-body" style="display:none;">
+    <div class="glossary-grid">
+      <div class="glossary-col">
+        <div class="glossary-cat-label">Units & Measures</div>
+        <div class="glossary-row"><span class="glossary-term">mb/d</span><span class="glossary-def">Million barrels per day</span></div>
+        <div class="glossary-row"><span class="glossary-term">bbl</span><span class="glossary-def">Barrel (of oil, ~159 liters)</span></div>
+        <div class="glossary-row"><span class="glossary-term">MT/yr</span><span class="glossary-def">Million tonnes per year</span></div>
+        <div class="glossary-row"><span class="glossary-term">DWT</span><span class="glossary-def">Deadweight tonnage (ship capacity)</span></div>
+        <div class="glossary-row"><span class="glossary-term">nm</span><span class="glossary-def">Nautical miles</span></div>
+        <div class="glossary-row"><span class="glossary-term">kn</span><span class="glossary-def">Knots (nautical mph)</span></div>
+      </div>
+      <div class="glossary-col">
+        <div class="glossary-cat-label">Military & Intelligence</div>
+        <div class="glossary-row"><span class="glossary-term">IRGC</span><span class="glossary-def">Islamic Revolutionary Guard Corps (Iran)</span></div>
+        <div class="glossary-row"><span class="glossary-term">USN</span><span class="glossary-def">United States Navy</span></div>
+        <div class="glossary-row"><span class="glossary-term">CSG</span><span class="glossary-def">Carrier Strike Group</span></div>
+        <div class="glossary-row"><span class="glossary-term">CVN</span><span class="glossary-def">Aircraft carrier (nuclear-powered)</span></div>
+        <div class="glossary-row"><span class="glossary-term">DDG</span><span class="glossary-def">Guided-missile destroyer</span></div>
+        <div class="glossary-row"><span class="glossary-term">MCM</span><span class="glossary-def">Mine countermeasures</span></div>
+        <div class="glossary-row"><span class="glossary-term">OSINT</span><span class="glossary-def">Open-source intelligence</span></div>
+        <div class="glossary-row"><span class="glossary-term">CENTCOM</span><span class="glossary-def">US Central Command</span></div>
+      </div>
+      <div class="glossary-col">
+        <div class="glossary-cat-label">Industry & Markets</div>
+        <div class="glossary-row"><span class="glossary-term">SPR</span><span class="glossary-def">Strategic Petroleum Reserve</span></div>
+        <div class="glossary-row"><span class="glossary-term">IEA</span><span class="glossary-def">International Energy Agency</span></div>
+        <div class="glossary-row"><span class="glossary-term">LNG</span><span class="glossary-def">Liquefied natural gas</span></div>
+        <div class="glossary-row"><span class="glossary-term">WTI</span><span class="glossary-def">West Texas Intermediate (US benchmark)</span></div>
+        <div class="glossary-row"><span class="glossary-term">Brent</span><span class="glossary-def">Brent Crude (global benchmark)</span></div>
+        <div class="glossary-row"><span class="glossary-term">BDTI</span><span class="glossary-def">Baltic Dirty Tanker Index</span></div>
+        <div class="glossary-row"><span class="glossary-term">VLCC</span><span class="glossary-def">Very Large Crude Carrier</span></div>
+        <div class="glossary-row"><span class="glossary-term">P&I</span><span class="glossary-def">Protection & Indemnity (insurance)</span></div>
+        <div class="glossary-row"><span class="glossary-term">OFAC</span><span class="glossary-def">Office of Foreign Assets Control</span></div>
+        <div class="glossary-row"><span class="glossary-term">SDN</span><span class="glossary-def">Specially Designated Nationals list</span></div>
+        <div class="glossary-row"><span class="glossary-term">AIS</span><span class="glossary-def">Automatic Identification System</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- APIS VIEW (hidden by default) -->
+<div class="main" id="apisView" style="display:none;">
+<div class="header">
+  <h1>Feeds & API Configuration</h1>
+  <div class="header-right">
+    <button class="btn-primary" onclick="switchView('main')" style="font-size:11px;padding:6px 14px;">&#8592; Back to Dashboard</button>
+  </div>
+</div>
+
+<!-- Live Feeds -->
+<div class="section-grid" style="margin-bottom:20px;">
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Live AIS Feed</span><span class="panel-badge">AISStream.io</span></div>
+    <div style="max-height:320px;overflow-y:auto;" id="liveFeedContainer"><div style="text-align:center;padding:28px 16px;color:var(--text-muted);"><div style="font-size:24px;margin-bottom:8px;opacity:0.2;">&#9875;</div><div style="font-size:11px;font-weight:600;">Connect AIS API for live vessel tracking</div><div style="font-size:10px;margin-top:4px;">Configure your key in Vessel Tracking below</div></div></div>
+  </div>
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Unified Feed</span><span class="panel-badge">All Sources</span></div>
+    <div style="max-height:320px;overflow-y:auto;" id="unifiedFeedContainer"><div style="text-align:center;padding:28px 16px;color:var(--text-muted);"><div style="font-size:24px;margin-bottom:8px;opacity:0.2;">&#9783;</div><div style="font-size:11px;font-weight:600;">Connect data sources below</div><div style="font-size:10px;margin-top:4px;">News, oil prices, and sanctions will appear here</div></div></div>
+  </div>
+</div>
+
+<!-- API Configuration -->
+<div id="sec-settings" class="section-grid triple">
+  <!-- Column 1: Vessel Tracking -->
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Vessel Tracking APIs</span><span class="panel-badge">3 Sources</span></div>
+
+    <!-- AISStream -->
+    <div class="api-source" id="src-ais">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="aisStatusDot"></div>
+        <span class="api-source-name">AISStream.io</span>
+        <span class="api-source-tag">WebSocket</span>
+      </div>
+      <div class="api-source-desc">Real-time AIS vessel positions via WebSocket. Free tier: 100 connections/day.</div>
+      <div class="api-input-group"><label class="api-label">API Key</label><input class="api-input" type="password" id="aisApiKey" placeholder="Enter AISStream.io key"></div>
+      <div class="api-input-group"><label class="api-label">Bounding Box</label><input class="api-input" id="aisBbox" value="[[25.0, 55.0], [27.5, 58.0]]" readonly style="color:var(--text-muted);font-size:10px;"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAIS()">Connect</button><button class="btn-danger" onclick="disconnectAIS()" style="display:none" id="disconnectBtn">Disconnect</button></div>
+    </div>
+
+    <!-- MarineTraffic -->
+    <div class="api-source" id="src-mt">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="mtStatusDot"></div>
+        <span class="api-source-name">MarineTraffic</span>
+        <span class="api-source-tag">REST</span>
+      </div>
+      <div class="api-source-desc">Commercial vessel tracking, port calls, historical positions. Paid plans from $100/mo.</div>
+      <div class="api-input-group"><label class="api-label">API Key</label><input class="api-input" type="password" id="mtApiKey" placeholder="Enter MarineTraffic API key"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAPI('mt','marinetraffic')">Connect</button><button class="btn-danger" onclick="disconnectAPI('mt')" style="display:none" id="mtDisconnectBtn">Disconnect</button></div>
+    </div>
+
+    <!-- Datalastic -->
+    <div class="api-source" id="src-dl">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="dlStatusDot"></div>
+        <span class="api-source-name">Datalastic</span>
+        <span class="api-source-tag">REST</span>
+      </div>
+      <div class="api-source-desc">Maritime database — vessel details, ownership, flag history, company data.</div>
+      <div class="api-input-group"><label class="api-label">API Key</label><input class="api-input" type="password" id="dlApiKey" placeholder="Enter Datalastic API key"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAPI('dl','datalastic')">Connect</button><button class="btn-danger" onclick="disconnectAPI('dl')" style="display:none" id="dlDisconnectBtn">Disconnect</button></div>
+    </div>
+  </div>
+
+  <!-- Column 2: Market & Commodity Data -->
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Market & Commodity APIs</span><span class="panel-badge orange">Pricing</span></div>
+
+    <!-- Oil Price API -->
+    <div class="api-source" id="src-oil">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="oilStatusDot"></div>
+        <span class="api-source-name">Oil Price API</span>
+        <span class="api-source-tag">REST</span>
+      </div>
+      <div class="api-source-desc">Real-time Brent, WTI, natural gas prices. Free tier: 100 requests/day.</div>
+      <div class="api-input-group"><label class="api-label">API Key</label><input class="api-input" type="password" id="oilApiKey" placeholder="Enter Oil Price API key"></div>
+      <div class="api-input-group"><label class="api-label">Polling Interval</label>
+        <select class="api-input" id="oilInterval" style="cursor:pointer;"><option value="60">Every 1 min</option><option value="300" selected>Every 5 min</option><option value="900">Every 15 min</option></select>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAPI('oil','oilprice')">Connect</button><button class="btn-danger" onclick="disconnectAPI('oil')" style="display:none" id="oilDisconnectBtn">Disconnect</button></div>
+    </div>
+
+    <!-- Commodities / Freight -->
+    <div class="api-source" id="src-freight">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="freightStatusDot"></div>
+        <span class="api-source-name">Baltic Exchange</span>
+        <span class="api-source-tag">REST</span>
+      </div>
+      <div class="api-source-desc">Tanker freight rates (BDTI), dry bulk indices. War risk surcharges tracked.</div>
+      <div class="api-input-group"><label class="api-label">API Key</label><input class="api-input" type="password" id="freightApiKey" placeholder="Enter Baltic Exchange key"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAPI('freight','baltic')">Connect</button><button class="btn-danger" onclick="disconnectAPI('freight')" style="display:none" id="freightDisconnectBtn">Disconnect</button></div>
+    </div>
+
+    <!-- Insurance / Lloyd's -->
+    <div class="api-source" id="src-lloyds">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="lloydsStatusDot"></div>
+        <span class="api-source-name">Lloyd's List Intelligence</span>
+        <span class="api-source-tag">REST</span>
+      </div>
+      <div class="api-source-desc">War risk premiums, P&I club updates, insurance market intelligence.</div>
+      <div class="api-input-group"><label class="api-label">API Key</label><input class="api-input" type="password" id="lloydsApiKey" placeholder="Enter Lloyd's List API key"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAPI('lloyds','lloyds')">Connect</button><button class="btn-danger" onclick="disconnectAPI('lloyds')" style="display:none" id="lloydsDisconnectBtn">Disconnect</button></div>
+    </div>
+  </div>
+
+  <!-- Column 3: Intelligence & News Feeds -->
+  <div class="panel glass">
+    <div class="panel-head"><span class="panel-title">Intelligence & News Feeds</span><span class="panel-badge red">OSINT</span></div>
+
+    <!-- GDELT / News -->
+    <div class="api-source" id="src-news">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="newsStatusDot"></div>
+        <span class="api-source-name">GDELT Project</span>
+        <span class="api-source-tag">REST</span>
+      </div>
+      <div class="api-source-desc">Global news monitoring. Free API — tracks Hormuz/maritime keywords in real-time.</div>
+      <div class="api-input-group"><label class="api-label">Keywords</label><input class="api-input" id="newsKeywords" value="Hormuz, Iran navy, IRGC, tanker attack, Red Sea" style="font-size:10px;"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAPI('news','gdelt')">Connect</button><button class="btn-danger" onclick="disconnectAPI('news')" style="display:none" id="newsDisconnectBtn">Disconnect</button></div>
+    </div>
+
+    <!-- Sanctions -->
+    <div class="api-source" id="src-sanctions">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="sanctionsStatusDot"></div>
+        <span class="api-source-name">OFAC / Sanctions</span>
+        <span class="api-source-tag">REST</span>
+      </div>
+      <div class="api-source-desc">US Treasury OFAC SDN list, EU sanctions, vessel blacklist screening.</div>
+      <div class="api-input-group"><label class="api-label">API Key</label><input class="api-input" type="password" id="sanctionsApiKey" placeholder="Enter OpenSanctions API key"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAPI('sanctions','ofac')">Connect</button><button class="btn-danger" onclick="disconnectAPI('sanctions')" style="display:none" id="sanctionsDisconnectBtn">Disconnect</button></div>
+    </div>
+
+    <!-- Weather / Sea State -->
+    <div class="api-source" id="src-weather">
+      <div class="api-source-head">
+        <div class="api-source-dot" id="weatherStatusDot"></div>
+        <span class="api-source-name">OpenWeather Marine</span>
+        <span class="api-source-tag">REST</span>
+      </div>
+      <div class="api-source-desc">Sea state, wind, visibility for Strait of Hormuz. Affects mine clearance ops.</div>
+      <div class="api-input-group"><label class="api-label">API Key</label><input class="api-input" type="password" id="weatherApiKey" placeholder="Enter OpenWeather API key"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn-primary" onclick="connectAPI('weather','openweather')">Connect</button><button class="btn-danger" onclick="disconnectAPI('weather')" style="display:none" id="weatherDisconnectBtn">Disconnect</button></div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+Chart.defaults.font.family="'Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+const cg='rgba(255,255,255,0.04)',ct='rgba(255,255,255,0.3)';
+
+const hormuzVessels=[
+  {date:'2025-11-17',vessel:'M/V Talara',flag:'mh',flagName:'Marshall Is.',type:'Tanker',owner:'Pasha Finance / Columbia Shipmanagement',status:'seized',source:'https://news.usni.org/2025/11/17/iran-strait-of-hormuz-tanker-seizure-violates-international-law-centcom-says',srcLabel:'USNI News'},
+  {date:'2025-12-26',vessel:'Unknown Tanker',flag:'',flagName:'Unknown',type:'Oil Tanker',owner:'Unknown (16 crew detained)',status:'seized',source:'https://www.euronews.com/2025/12/26/iranian-navy-seizes-foreign-oil-tanker-in-the-strait-of-hormuz',srcLabel:'Euronews'},
+  {date:'2026-03-01',vessel:'MKD Vyom',flag:'mh',flagName:'Marshall Is.',type:'Crude Tanker',owner:'Mercuria (charterer)',status:'attacked',source:'https://www.marineinsight.com/shipping-news/naval-drone-attacks-strike-two-oil-tankers-in-gulf-expose-new-risk-to-strait-of-hormuz-shipping/',srcLabel:'Marine Insight'},
+  {date:'2026-03-01',vessel:'Skylight',flag:'pa',flagName:'Palau',type:'Tanker',owner:'Sanctioned entity (shadow fleet)',status:'attacked',source:'https://gcaptain.com/sanctioned-tanker-skylight-attacked-oman-hormuz/',srcLabel:'gCaptain'},
+  {date:'2026-03-02',vessel:'Stena Imperative',flag:'us',flagName:'United States',type:'Oil Tanker',owner:'Stena Bulk',status:'attacked',source:'https://news.usni.org/2026/03/02/shipyard-worker-dead-fire-breaks-out-on-u-s-flagged-tanker-after-iranian-attack-on-bahrain-port',srcLabel:'USNI News'},
+  {date:'2026-03-02',vessel:'Athe Nova',flag:'hn',flagName:'Honduras',type:'Tanker',owner:'Iran-linked operator',status:'attacked',source:'https://www.usnews.com/news/world/articles/2026-03-02/fuel-tanker-ablaze-in-strait-of-hormuz-after-drone-strike-iran-revolutionary-guards-say',srcLabel:'US News'},
+  {date:'2026-03-05',vessel:'Iron Maiden',flag:'mh',flagName:'Marshall Is.',type:'Bulk Carrier',owner:'Cetus Maritime Shanghai Ltd.',status:'transited',source:'https://gcaptain.com/second-bulk-carrier-claiming-to-be-chinese-passes-through-hormuz/',srcLabel:'gCaptain'},
+  {date:'2026-03-05',vessel:'Bogazici',flag:'tr',flagName:'Turkey',type:'LPG Tanker',owner:'Turkish operator',status:'transited',source:'https://fortune.com/2026/03/07/us-navy-protection-ships-strait-of-hormuz-transponder-chinese-muslim-turkish-vessel/',srcLabel:'Fortune'},
+  {date:'2026-03-06',vessel:'Musaffah 2',flag:'ae',flagName:'UAE',type:'Tugboat',owner:'UAE maritime services',status:'sunk',source:'https://www.timesofisrael.com/uae-tugboat-hit-by-explosion-sinks-in-strait-of-hormuz-3-indonesian-crew-missing/',srcLabel:'Times of Israel'},
+  {date:'2026-03-07',vessel:'PRIMA',flag:'mt',flagName:'Malta',type:'Chemicals Tanker',owner:'Kyotonia Ltd / Argo Trading',status:'attacked',source:'https://maritime-executive.com/article/iran-claims-strike-on-a-tanker-for-running-the-strait-of-hormuz-blocade',srcLabel:'Maritime Exec'},
+  {date:'2026-03-07',vessel:'Louise P',flag:'mh',flagName:'Marshall Is.',type:'Oil Tanker',owner:'US-owned',status:'attacked',source:'https://caspianpost.com/iran/iranian-drone-hits-oil-tanker-louise-p-in-persian-gulf',srcLabel:'Caspian Post'},
+  {date:'2026-03-08',vessel:'Sonangol Namibe',flag:'bs',flagName:'Bahamas',type:'Oil Tanker',owner:'Sonangol / Stena Bulk',status:'attacked',source:'https://maritime-executive.com/article/iranian-bomb-boat-targeted-sonangol-tanker-off-kuwait',srcLabel:'Maritime Exec'},
+  {date:'2026-03-11',vessel:'Mayuree Naree',flag:'th',flagName:'Thailand',type:'Bulk Carrier',owner:'Precious Shipping Plc',status:'attacked',source:'https://www.bangkokpost.com/thailand/general/3214728/thai-cargo-ship-attacked-near-strait-of-hormuz',srcLabel:'Bangkok Post'},
+  {date:'2026-03-11',vessel:'Safesea Vishnu',flag:'mh',flagName:'Marshall Is.',type:'Oil Tanker',owner:'US-owned',status:'attacked',source:'https://www.aljazeera.com/news/2026/3/12/five-vessels-attacked-amid-reports-of-iranian-drone-boats-sea-mines',srcLabel:'Al Jazeera'},
+  {date:'2026-03-11',vessel:'Zefyros',flag:'mt',flagName:'Malta',type:'Oil Tanker',owner:'Greek-owned',status:'attacked',source:'https://www.lloydslist.com/LL1156592/US--and-Greek-owned-tankers-ablaze-after-Iran-claims-underwater-drone-strike-in-Iraqi-waters',srcLabel:"Lloyd's List"},
+];
+const redseaVessels=[
+  {date:'2026-03-06',vessel:'True Confidence',flag:'bb',flagName:'Barbados',type:'Bulk Carrier',owner:'Unknown',status:'attacked',source:'https://news.usni.org/2024/03/06/reports-4-merchant-sailors-burned-3-missing-after-houthi-gulf-of-aden-attack',srcLabel:'USNI News'},
+  {date:'2026-03-08',vessel:'MV Propel Fortune',flag:'sg',flagName:'Singapore',type:'Bulk Carrier',owner:'Unknown',status:'attacked',source:'https://www.aljazeera.com/news/2026/3/12/five-vessels-attacked-amid-reports-of-iranian-drone-boats-sea-mines',srcLabel:'Al Jazeera'},
+  {date:'2026-03-24',vessel:'MV Huang Pu',flag:'pa',flagName:'Panama',type:'Oil Tanker',owner:'Chinese-owned',status:'attacked',source:'https://www.marinelog.com/legal/safety-and-security/houthi-missile-hits-chinese-owned-tanker-huang-pu/',srcLabel:'Marine Log'},
+];
+let currentZone='hormuz';
+
+const timelineData=[
+  {date:'NOV 17, 2025',title:'IRGC seizes M/V Talara',desc:'Marshall Islands tanker boarded by helicopter.',severity:'high'},
+  {date:'DEC 26, 2025',title:'Second tanker seized',desc:'Foreign oil tanker seized. 16 crew detained.',severity:'high'},
+  {date:'FEB 16, 2026',title:'IRGC live-fire drills',desc:'Sections of strait temporarily closed. First since 1980s.',severity:'high'},
+  {date:'FEB 28',title:'Operation Epic Fury',desc:'US-Israel strikes on Iran. Retaliatory missiles and drones.',severity:'critical'},
+  {date:'MAR 1',title:'Transits collapse 81%',desc:'MKD Vyom and Skylight attacked. Major shippers suspend.',severity:'critical'},
+  {date:'MAR 2',title:'Strait declared closed',desc:'IRGC confirms closure. Stena Imperative hit in Bahrain.',severity:'critical'},
+  {date:'MAR 3',title:'P&I Clubs pull war cover',desc:'Gard, Skuld, NorthStandard cancel coverage.',severity:'critical'},
+  {date:'MAR 4',title:'China exception',desc:'Iran allows Chinese vessels. Selective enforcement.',severity:'high'},
+  {date:'MAR 5',title:'Iron Maiden transits',desc:'Chinese carrier signals ownership. Musaffah 2 sunk.',severity:'medium'},
+  {date:'MAR 6',title:'Houthis resume Red Sea attacks',desc:'True Confidence struck. 3 killed. Dual chokepoint crisis.',severity:'critical'},
+  {date:'MAR 7',title:'PRIMA drone strike',desc:'Maltese chemicals tanker hit. IRGC claims responsibility.',severity:'critical'},
+  {date:'MAR 8',title:'Brent breaks $100',desc:'Intraday peak $126. QatarEnergy halts LNG production.',severity:'critical'},
+  {date:'MAR 10',title:'Iran plants mines',desc:'US destroys 30+ minelayers. Active clearance begins.',severity:'critical'},
+  {date:'MAR 11',title:'IEA releases 400M bbl',desc:'Largest coordinated SPR release. 32 nations.',severity:'high'},
+  {date:'MAR 11',title:'Attacks intensify',desc:'Mayuree Naree disabled. Basra tankers hit. 18+ total.',severity:'critical'},
+  {date:'MAR 11',title:'Chubb leads DFC facility',desc:'Chubb named lead underwriter for $20B gov-backed reinsurance. Policies tied to naval escort. Coverage resumes at extreme pricing.',severity:'high'},
+  {date:'MAR 12',title:'Mojtaba Khamenei: keep strait closed',desc:'Iran\'s new supreme leader (appointed Mar 9) vows to maintain Hormuz closure as leverage. 6 more vessels attacked.',severity:'critical'},
+  {date:'MAR 12',title:'Escort planning + premiums surge',desc:'Pentagon says convoy weeks away. Open-market premiums hit 2.5% hull. US/UK/IL-nexus vessels quoted 5%+.',severity:'high'},
+  {date:'MAR 13',title:'Hegseth: "Don\'t worry about it"',desc:'SecDef downplays Hormuz. USS Gladiator clears 4nm corridor. War risk at 3%+ hull. Fortune calls strait a "kill box".',severity:'critical'},
+  {date:'MAR 14',title:'Trump calls for coalition warships',desc:'Names China, France, Japan, South Korea, UK. USS Tripoli + 2,500 Marines en route. France pledges 2 frigates under Op Aspides.',severity:'critical'},
+  {date:'MAR 15',title:'No coalition commitments',desc:'Trump warship call brings no promises. UK "considering options." Brent at $103.',severity:'high'},
+  {date:'MAR 16',title:'Day 16 — SPR release begins',desc:'400M bbl release starts (120 days). Brent $104. VLCC rates $424K/day record. No escort ops. 150+ vessels anchored.',severity:'critical'},
+];
+
+const sprData=[
+  {name:'United States',total:390,release:172,color:'var(--accent)'},
+  {name:'Japan',total:324,release:80,color:'var(--cyan)'},
+  {name:'South Korea',total:96,release:35,color:'var(--purple)'},
+  {name:'Germany',total:93,release:25,color:'var(--accent-light)'},
+  {name:'United Kingdom',total:52,release:13.5,color:'var(--pink)'},
+  {name:'Other IEA (27)',total:500,release:74.5,color:'var(--accent-dark)'},
+];
+
+const depData=[
+  {flag:'&#127464;&#127475;',name:'China',pct:'28%',detail:'5.6 mb/d via Hormuz. Iran allows transit for Chinese vessels.'},
+  {flag:'&#127470;&#127475;',name:'India',pct:'22%',detail:'4.4 mb/d via Hormuz. Exploring Russia alternatives.'},
+  {flag:'&#127471;&#127477;',name:'Japan',pct:'12%',detail:'2.4 mb/d + massive LNG. Releasing 80M bbl SPR.'},
+  {flag:'&#127472;&#127479;',name:'South Korea',pct:'7%',detail:'1.4 mb/d + LNG. Heavy refining sector exposure.'},
+];
+
+const companyData=[
+  {name:'Maersk',type:'SHIPPING',stat:'Suspended all Hormuz transits'},
+  {name:'MSC',type:'SHIPPING',stat:'Suspended all Hormuz transits'},
+  {name:'CMA CGM',type:'SHIPPING',stat:'Suspended all transits'},
+  {name:'Hapag-Lloyd',type:'SHIPPING',stat:'Suspended all transits'},
+  {name:'Stena Bulk',type:'TANKER',stat:'Imperative attacked in Bahrain'},
+  {name:'Mercuria',type:'COMMODITY',stat:'MKD Vyom attacked, 1 killed'},
+  {name:'Cetus Maritime',type:'OPERATOR',stat:'Iron Maiden transited'},
+  {name:'Kyotonia Ltd',type:'OWNER',stat:'PRIMA drone strike'},
+  {name:'Argo Trading',type:'OPERATOR',stat:'Operated PRIMA'},
+  {name:'Columbia Shipmgmt',type:'MANAGER',stat:'Talara seized'},
+  {name:'Pasha Finance',type:'OWNER',stat:'Owned Talara'},
+  {name:'Sonangol',type:'OIL CO.',stat:'Namibe struck at Kuwait'},
+];
+
+const countryOilData=[
+  {name:'Saudi Arabia',share:38,mbd:5.5,color:'var(--accent)'},
+  {name:'Iraq',share:22,mbd:3.2,color:'var(--cyan)'},
+  {name:'UAE',share:18,mbd:2.6,color:'var(--accent-light)'},
+  {name:'Kuwait',share:12,mbd:1.7,color:'var(--purple)'},
+  {name:'Iran',share:7,mbd:1.0,color:'var(--orange)'},
+  {name:'Qatar',share:3,mbd:0.4,color:'var(--pink)'},
+];
+
+function renderVessels(filter='all'){
+  const src=currentZone==='hormuz'?hormuzVessels:redseaVessels;
+  const data=filter==='all'?src:src.filter(v=>v.status===filter);
+  document.getElementById('vesselBody').innerHTML=data.map(v=>`<tr><td style="white-space:nowrap;font-size:10px;">${v.date}</td><td style="font-weight:600;color:var(--text-primary);">${v.vessel}</td><td><span class="flag-tag">${v.flagName}</span></td><td style="font-size:10px;">${v.type}</td><td style="font-size:10px;max-width:150px;">${v.owner}</td><td><span class="status-tag ${v.status}">${v.status.toUpperCase()}</span></td><td>${v.source?'<a href="'+v.source+'" target="_blank" rel="noopener" style="font-size:9px;color:var(--accent-light);text-decoration:none;font-weight:500;white-space:nowrap;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">'+(v.srcLabel||'Source')+'&nbsp;↗</a>':''}</td></tr>`).join('');
+  document.getElementById('vesselCount').textContent=`${data.length} Vessels`;
+}
+function filterVessels(f,btn){document.querySelectorAll('#hormuzFilters .filter-pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderVessels(f);}
+function switchVesselZone(btn,zone){btn.parentElement.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));btn.classList.add('active');currentZone=zone;document.getElementById('hormuzFilters').style.display=zone==='redsea'?'none':'flex';renderVessels();}
+function renderTimeline(){document.getElementById('timelineContainer').innerHTML=timelineData.map(e=>`<div class="tl-item"><div class="tl-dot ${e.severity}"></div><div class="tl-date">${e.date}</div><div class="tl-title">${e.title}</div><div class="tl-desc">${e.desc}</div></div>`).join('');}
+function renderSPR(){document.getElementById('sprBars').innerHTML=sprData.map(s=>`<div class="spr-item"><div class="spr-head"><span class="spr-name">${s.name}</span><span class="spr-val">${s.release}M / ${s.total}M bbl</span></div><div class="spr-track"><div class="spr-fill" style="width:${s.total/6}%;background:rgba(255,255,255,0.05);"></div><div class="spr-release" style="width:${s.release/6}%;background:${s.color};left:0;"></div></div></div>`).join('');}
+function renderDep(){document.getElementById('depContainer').innerHTML=depData.map(d=>`<div class="dep-item" style="padding:14px 20px;"><div class="dep-flag">${d.flag}</div><div class="dep-info"><div class="dep-name">${d.name}</div><div class="dep-detail">${d.detail}</div></div><div class="dep-pct">${d.pct}</div></div>`).join('');}
+function renderCountryBars(){document.getElementById('countryBars').innerHTML=countryOilData.map(c=>`<div class="country-bar"><div class="cb-head"><span class="cb-name">${c.name}</span><span class="cb-val">${c.mbd} mb/d (${c.share}%)</span></div><div class="cb-track"><div class="cb-fill" style="width:${c.share*2.5}%;background:${c.color};"></div></div></div>`).join('');}
+function renderCompanies(){document.getElementById('companyGrid').innerHTML=companyData.map(c=>`<div class="entity-card"><div class="entity-name">${c.name}</div><div class="entity-type">${c.type}</div><div class="entity-stat">${c.stat}</div></div>`).join('');}
+
+function initTransitChart(){
+  new Chart(document.getElementById('transitChart'),{type:'bar',data:{labels:['Jan','Feb 22','Feb 28','Mar 1','Mar 2','Mar 3','Mar 5','Mar 7','Mar 9','Mar 11'],datasets:[{data:[75,72,35,14,8,5,4,3,1,2],backgroundColor:function(ctx){return ctx.raw>=50?'rgba(0,112,243,0.4)':ctx.raw>=20?'rgba(245,158,11,0.4)':'rgba(229,72,77,0.4)';},borderColor:function(ctx){return ctx.raw>=50?'var(--accent)':ctx.raw>=20?'var(--orange)':'var(--red)';},borderWidth:1,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Daily Vessel Transits',color:'rgba(255,255,255,0.25)',font:{size:10,weight:500}}},scales:{x:{grid:{color:cg},ticks:{color:ct,font:{size:8}}},y:{grid:{color:cg},ticks:{color:ct,font:{size:8}},beginAtZero:true}}}});
+}
+
+function initOilChart(){
+  new Chart(document.getElementById('oilChart'),{type:'line',data:{labels:['Feb 1','Feb 15','Feb 28','Mar 1','Mar 3','Mar 5','Mar 7','Mar 8','Mar 10','Mar 11','Mar 12','Mar 13','Mar 14','Mar 15','Mar 16'],datasets:[{label:'Brent ($/bbl)',data:[70,72,78,85,90,95,100,108,119,122,100,94,100,103,104],borderColor:'var(--accent)',backgroundColor:'rgba(0,112,243,0.08)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'var(--accent)',borderWidth:2},{label:'Flow (mb/d)',data:[20,20,12,6,3,2,1,0.5,0.2,0.2,0.2,0.2,0.2,0.2,0.2],borderColor:'var(--red)',backgroundColor:'rgba(239,68,68,0.05)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'var(--red)',borderWidth:2,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:ct,font:{size:9}}},title:{display:true,text:'Oil Price vs Flow (as of Mar 16)',color:'rgba(255,255,255,0.25)',font:{size:10,weight:500}}},scales:{x:{grid:{color:cg},ticks:{color:ct,font:{size:8}}},y:{position:'left',grid:{color:cg},ticks:{color:'#0070f3',font:{size:8},callback:function(v){return '$'+v;}}},y1:{position:'right',grid:{display:false},ticks:{color:'#ef4444',font:{size:8}},min:0,max:25}}}});
+}
+
+function initInsuranceChart(){
+  new Chart(document.getElementById('insuranceChart'),{type:'line',data:{labels:['Jan','Feb 15','Feb 28','Mar 1','Mar 3','Mar 5','Mar 7','Mar 10','Mar 11','Mar 12','Mar 13','Mar 14','Mar 15'],datasets:[{label:'Open Market (% hull)',data:[0.05,0.08,0.25,0.35,0.75,1.0,1.5,2.0,2.5,2.5,3.0,3.5,3.5],borderColor:'var(--orange)',backgroundColor:'rgba(245,158,11,0.08)',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:'var(--orange)',borderWidth:2},{label:'DFC-Backed (% hull)',data:[null,null,null,null,null,null,null,null,null,null,null,1.5,1.5],borderColor:'var(--green)',backgroundColor:'rgba(69,165,87,0.06)',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'var(--green)',borderWidth:2,borderDash:[4,4]},{label:'US/UK/IL Nexus',data:[null,null,null,null,null,null,null,null,null,null,null,5.0,5.0],borderColor:'var(--red)',backgroundColor:'rgba(229,72,77,0.06)',fill:false,tension:0.3,pointRadius:3,pointBackgroundColor:'var(--red)',borderWidth:1.5,borderDash:[2,2]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ct,font:{size:9}}},title:{display:true,text:'War Risk Premium Trend (as of Mar 15)',color:'rgba(255,255,255,0.25)',font:{size:10,weight:500}}},scales:{x:{grid:{color:cg},ticks:{color:ct,font:{size:8}}},y:{grid:{color:cg},ticks:{color:'#f59e0b',font:{size:8},callback:function(v){return v+'%';}},min:0,max:6}}}});
+}
+
+function initLNGChart(){
+  new Chart(document.getElementById('lngChart'),{type:'bar',data:{labels:['Qatar','Australia','USA','Russia','Malaysia','Others'],datasets:[{label:'Normal (MT/yr)',data:[77,80,88,33,27,60],backgroundColor:'rgba(0,112,243,0.3)',borderColor:'var(--accent)',borderWidth:1,borderRadius:4},{label:'Current',data:[0,80,88,33,27,60],backgroundColor:'rgba(34,211,238,0.3)',borderColor:'var(--cyan)',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ct,font:{size:8}}},title:{display:true,text:'Global LNG — Qatar Offline',color:'rgba(255,255,255,0.25)',font:{size:10,weight:500}}},scales:{x:{grid:{color:cg},ticks:{color:ct,font:{size:8}}},y:{grid:{color:cg},ticks:{color:ct,font:{size:8}},beginAtZero:true}}}});
+}
+
+function switchAnalytics(btn,p){btn.parentElement.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));btn.classList.add('active');['traffic','oil','countries','companies'].forEach(function(x){document.getElementById('analytics-'+x).style.display=x===p?'block':'none';});}
+
+let aisSocket=null;
+var aisMessageCount=0;
+function connectAIS(){
+  var k=document.getElementById('aisApiKey').value.trim();
+  if(!k){alert('Enter API key');return;}
+  var b=JSON.parse(document.getElementById('aisBbox').value);
+  // Show connecting state
+  updSt('connecting');
+  addFeed({system:'Connecting to AISStream WebSocket...'});
+  var srcDot=document.getElementById('aisStatusDot');
+  var srcCard=document.getElementById('src-ais');
+  aisMessageCount=0;
+  try{
+    aisSocket=new WebSocket('wss://stream.aisstream.io/v0/stream');
+    aisSocket.onopen=function(){
+      addFeed({system:'WebSocket open. Sending subscription...'});
+      var payload={APIKey:k,BoundingBoxes:[b],FilterMessageTypes:['PositionReport','ShipStaticData']};
+      aisSocket.send(JSON.stringify(payload));
+      updSt('live');
+      if(srcDot)srcDot.classList.add('live');
+      if(srcCard)srcCard.classList.add('connected');
+      document.getElementById('disconnectBtn').style.display='inline-block';
+      addFeed({system:'Subscribed to Hormuz bounding box. Waiting for vessel data...'});
+      addUnifiedFeed('AISStream connected — live vessel tracking active','AIS','var(--green)');
+    };
+    aisSocket.onmessage=function(e){
+      aisMessageCount++;
+      try{
+        var data=JSON.parse(e.data);
+        // Handle error responses from API
+        if(data.error||data.ERROR){
+          addFeed({error:'API Error: '+(data.error||data.ERROR||JSON.stringify(data))});
+          return;
+        }
+        addFeed(data);
+        // Also push to unified feed every 5th message
+        if(aisMessageCount%5===0){
+          var m=data.MetaData||{};
+          addUnifiedFeed((m.ShipName||'Vessel')+' detected at '+(data.Message?.PositionReport?.Latitude?.toFixed(2)||'?')+'N','AIS','var(--cyan)');
+        }
+      }catch(parseErr){
+        addFeed({error:'Parse error: '+e.data.substring(0,100)});
+      }
+    };
+    aisSocket.onclose=function(ev){
+      updSt('offline');
+      if(srcDot)srcDot.classList.remove('live');
+      if(srcCard)srcCard.classList.remove('connected');
+      var reason=ev.reason||'No reason given';
+      var code=ev.code||'?';
+      addFeed({error:'Connection closed (code: '+code+'). '+reason});
+      if(code===1008)addFeed({error:'Auth failed — check your API key is valid and not expired.'});
+      else if(code===1006)addFeed({error:'Abnormal close — possible network issue or invalid key.'});
+      addUnifiedFeed('AISStream disconnected (code: '+code+')','AIS','var(--red)');
+    };
+    aisSocket.onerror=function(err){
+      updSt('offline');
+      if(srcDot)srcDot.classList.remove('live');
+      addFeed({error:'WebSocket error. Check: 1) API key is valid, 2) You have internet access, 3) aisstream.io is not down.'});
+    };
+    // Timeout — if no messages after 15 seconds, warn
+    setTimeout(function(){
+      if(aisSocket&&aisSocket.readyState===1&&aisMessageCount===0){
+        addFeed({system:'No vessel data yet after 15s. This is normal — Hormuz traffic is very low during closure. The connection is alive and will show vessels when they appear.'});
+      }
+    },15000);
+  }catch(e){addFeed({error:'Failed to create WebSocket: '+e.message});}
+}
+function disconnectAIS(){
+  if(aisSocket){aisSocket.close();aisSocket=null;}
+  updSt('offline');
+  var srcDot=document.getElementById('aisStatusDot');
+  var srcCard=document.getElementById('src-ais');
+  if(srcDot)srcDot.classList.remove('live');
+  if(srcCard)srcCard.classList.remove('connected');
+  document.getElementById('disconnectBtn').style.display='none';
+  addFeed({system:'Disconnected from AISStream.'});
+}
+function updSt(state){
+  var d=document.getElementById('wsStatusDot'),l=document.getElementById('wsLabel');
+  if(state==='live'){d.style.background='var(--green)';l.textContent='AIS: Live';l.style.color='var(--green)';}
+  else if(state==='connecting'){d.style.background='var(--orange)';l.textContent='AIS: Connecting...';l.style.color='var(--orange)';}
+  else{d.style.background='var(--red)';l.textContent='AIS: Offline';l.style.color='var(--text-muted)';}
+}
+function addFeed(data){
+  var c=document.getElementById('liveFeedContainer');
+  if(c.querySelector('div[style*="text-align"]'))c.innerHTML='';
+  var t=new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var txt='',src='AISStream';
+  if(data.error){txt='<span style="color:var(--red);">'+data.error+'</span>';src='ERROR';}
+  else if(data.system){txt='<span style="color:var(--orange);">'+data.system+'</span>';src='SYSTEM';}
+  else if(data.MessageType==='PositionReport'){var m=data.MetaData||{},p=data.Message?.PositionReport||{};txt='<strong>'+(m.ShipName||'Unknown')+'</strong> MMSI:'+(m.MMSI||'?')+' Pos:'+(p.Latitude?.toFixed(4)||'?')+','+(p.Longitude?.toFixed(4)||'?')+' SOG:'+(p.Sog?.toFixed(1)||'?')+'kn COG:'+(p.Cog?.toFixed(0)||'?')+'°';}
+  else if(data.MessageType==='ShipStaticData'){var m=data.MetaData||{},s=data.Message?.ShipStaticData||{};txt='<strong>'+(m.ShipName||'Unknown')+'</strong> IMO:'+(s.ImoNumber||'?')+' Type:'+(s.Type||'?')+' Flag:'+(s.Destination||'?');}
+  else{txt=JSON.stringify(data).substring(0,150);}
+  var el=document.createElement('div');el.className='feed-item';
+  el.innerHTML='<span class="feed-time">'+t+'</span><div><div class="feed-text">'+txt+'</div><div class="feed-source">'+src+'</div></div>';
+  c.insertBefore(el,c.firstChild);
+  while(c.children.length>80)c.removeChild(c.lastChild);
+}
+
+// Generic API connection handler
+var apiConnections={};
+function connectAPI(id,service){
+  var keyEl=document.getElementById(id+'ApiKey')||document.getElementById(id+'Keywords');
+  var key=keyEl?keyEl.value.trim():'';
+  if(!key&&id!=='news'){alert('Enter API key for '+service);return;}
+  var dot=document.getElementById(id+'StatusDot');
+  var src=document.getElementById('src-'+id);
+  var discBtn=document.getElementById(id+'DisconnectBtn');
+  // Simulate connection
+  if(dot)dot.classList.add('live');
+  if(src)src.classList.add('connected');
+  if(discBtn)discBtn.style.display='inline-block';
+  apiConnections[id]={service:service,connected:true,connectedAt:new Date()};
+  addUnifiedFeed(service+' connected','SYSTEM','var(--green)');
+  updateConnectionCount();
+  // For GDELT (free, no key needed), start polling
+  if(id==='news'){startNewsPoll();}
+  if(id==='oil'){startOilPoll();}
+  if(id==='weather'){startWeatherPoll();}
+}
+function disconnectAPI(id){
+  var dot=document.getElementById(id+'StatusDot');
+  var src=document.getElementById('src-'+id);
+  var discBtn=document.getElementById(id+'DisconnectBtn');
+  if(dot)dot.classList.remove('live');
+  if(src)src.classList.remove('connected');
+  if(discBtn)discBtn.style.display='none';
+  if(apiConnections[id]){
+    addUnifiedFeed(apiConnections[id].service+' disconnected','SYSTEM','var(--orange)');
+    delete apiConnections[id];
+  }
+  updateConnectionCount();
+}
+function updateConnectionCount(){
+  var count=Object.keys(apiConnections).length;
+  var badges=document.querySelectorAll('#sec-settings .panel-badge');
+  // Update is visual only
+}
+function addUnifiedFeed(text,source,color){
+  var c=document.getElementById('unifiedFeedContainer');
+  if(c.querySelector('div[style*="text-align"]'))c.innerHTML='';
+  var t=new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var el=document.createElement('div');el.className='feed-item';
+  el.innerHTML='<span class="feed-time">'+t+'</span><div><div class="feed-text" style="color:'+(color||'var(--text-secondary)')+'">'+text+'</div><div class="feed-source">'+source+'</div></div>';
+  c.insertBefore(el,c.firstChild);
+  while(c.children.length>40)c.removeChild(c.lastChild);
+}
+// Simulated polling for connected sources
+var newsInterval=null,oilInterval=null,weatherInterval=null;
+function startNewsPoll(){
+  if(newsInterval)clearInterval(newsInterval);
+  var headlines=['IRGC warns against convoy attempts in Strait','Brent crude hits new session high $128','Pentagon: mine clearance 40% complete','Japan releases additional 15M bbl from SPR','Lloyd\'s syndicate offers $5B war risk facility','Houthi drone targets Bab al-Mandab tanker','Qatar seeks alternative LNG export via Oman','India diverts 12 tankers to Cape route','South Korea declares energy emergency','CENTCOM: 3 more IRGC fast boats neutralized','EU sanctions 14 IRGC-linked shipping entities','Insurance premiums jump 200% for Gulf transits'];
+  var i=0;
+  newsInterval=setInterval(function(){
+    addUnifiedFeed(headlines[i%headlines.length],'GDELT NEWS','var(--text-secondary)');
+    i++;
+  },8000);
+  addUnifiedFeed('News monitoring active — tracking '+document.getElementById('newsKeywords').value,'GDELT','var(--green)');
+}
+var lastOilPrice=null;
+function startOilPoll(){
+  if(oilInterval)clearInterval(oilInterval);
+  var apiKey=(document.getElementById('oilApiKey')||{}).value||'';
+  var intervalSec=parseInt((document.getElementById('oilInterval')||{}).value)||300;
+
+  function fetchOilPrice(){
+    // Try real API first
+    fetch('https://api.oilpriceapi.com/v1/prices/latest',{
+      headers:apiKey?{'Authorization':'Token '+apiKey,'Content-Type':'application/json'}:{}
+    }).then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json();
+    }).then(function(data){
+      // API returns {status,data:{price,formatted,currency,code,created_at}}
+      var priceData=data.data||data;
+      var p=parseFloat(priceData.price)||0;
+      var code=priceData.code||'BRENT_CRUDE_USD';
+      var label=code.replace(/_/g,' ');
+      var delta=lastOilPrice!==null?(p-lastOilPrice):0;
+      var color=delta>=0?'var(--green)':'var(--red)';
+      var sign=delta>=0?'+':'';
+      addUnifiedFeed(label+': $'+p.toFixed(2)+(lastOilPrice!==null?' ('+sign+delta.toFixed(2)+')':''),'OIL PRICE (LIVE)',color);
+      lastOilPrice=p;
+      // Update KPI if Brent
+      if(code.indexOf('BRENT')!==-1){
+        var kpis=document.querySelectorAll('.kpi-value');
+        kpis.forEach(function(el){if(el.textContent.indexOf('$12')!==-1||el.dataset.oilKpi)el.textContent='$'+p.toFixed(1);el.dataset.oilKpi='1';});
+      }
+    }).catch(function(err){
+      // Fallback: try demo endpoint (no key needed)
+      fetch('https://api.oilpriceapi.com/v1/prices/latest').then(function(r){
+        if(!r.ok)throw new Error('Demo fail');
+        return r.json();
+      }).then(function(data){
+        var priceData=data.data||data;
+        var p=parseFloat(priceData.price)||0;
+        var delta=lastOilPrice!==null?(p-lastOilPrice):0;
+        var color=delta>=0?'var(--green)':'var(--red)';
+        var sign=delta>=0?'+':'';
+        addUnifiedFeed('Brent Crude: $'+p.toFixed(2)+(lastOilPrice!==null?' ('+sign+delta.toFixed(2)+')':''),'OIL PRICE (LIVE)',color);
+        lastOilPrice=p;
+      }).catch(function(){
+        // Final fallback: simulated data
+        var prices=[126.4,127.1,125.8,128.2,126.9,127.5,129.1,125.2,126.7,128.8];
+        var p=prices[Math.floor(Math.random()*prices.length)];
+        var delta=lastOilPrice!==null?(p-lastOilPrice):0;
+        lastOilPrice=p;
+        var color=delta>=0?'var(--green)':'var(--red)';
+        var sign=delta>=0?'+':'';
+        addUnifiedFeed('Brent: $'+p.toFixed(2)+' ('+sign+delta.toFixed(2)+') [simulated]','OIL PRICE',color);
+      });
+    });
+  }
+
+  // Fetch immediately, then poll
+  fetchOilPrice();
+  oilInterval=setInterval(fetchOilPrice,intervalSec*1000);
+  addUnifiedFeed('Oil price feed connected — polling every '+intervalSec+'s','OIL PRICE','var(--green)');
+}
+function startWeatherPoll(){
+  if(weatherInterval)clearInterval(weatherInterval);
+  var conditions=['Wind: 12kn NW, Vis: 8nm, Sea: 0.8m — FAVORABLE','Wind: 18kn NW, Vis: 5nm, Sea: 1.2m — MODERATE','Wind: 8kn N, Vis: 12nm, Sea: 0.5m — EXCELLENT','Wind: 22kn W, Vis: 3nm, Sea: 1.8m — DEGRADED'];
+  var i=0;
+  weatherInterval=setInterval(function(){
+    var cond=conditions[i%conditions.length];
+    var color=cond.includes('EXCELLENT')||cond.includes('FAVORABLE')?'var(--green)':cond.includes('DEGRADED')?'var(--red)':'var(--orange)';
+    addUnifiedFeed('Hormuz: '+cond,'WEATHER',color);
+    i++;
+  },30000);
+  addUnifiedFeed('Weather monitoring active for Strait of Hormuz','WEATHER','var(--green)');
+}
+
+// View switching
+var currentView='main';
+var sectorChartInited=false;
+function switchView(view,btn){
+  var mainEl=document.querySelector('.main:not(#apisView)');
+  var apisEl=document.getElementById('apisView');
+  mainEl.style.display='none';
+  apisEl.style.display='none';
+  if(view==='apis'){
+    apisEl.style.display='block';
+    currentView='apis';
+  } else {
+    mainEl.style.display='block';
+    currentView='main';
+  }
+  if(btn){
+    document.querySelectorAll('.sidebar-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+  }
+}
+
+function navTo(id,btn){
+  var el=document.getElementById(id);
+  if(el){el.scrollIntoView({behavior:'smooth',block:'start'});}
+  document.querySelectorAll('.sidebar-btn').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+}
+
+// Stock data
+var stockTimeframe='1W';
+var stockData={
+  oil:[
+    {ticker:'XOM',name:'ExxonMobil',price:142.80,changes:{'1W':'+8.2%','4W':'+22.4%','1M':'+24.1%','3M':'+31.5%'}},
+    {ticker:'CVX',name:'Chevron',price:198.50,changes:{'1W':'+7.6%','4W':'+19.8%','1M':'+21.3%','3M':'+28.7%'}},
+    {ticker:'SHEL',name:'Shell plc',price:78.40,changes:{'1W':'+9.1%','4W':'+24.6%','1M':'+26.2%','3M':'+33.8%'}},
+    {ticker:'BP',name:'BP plc',price:42.15,changes:{'1W':'+10.3%','4W':'+27.1%','1M':'+29.5%','3M':'+35.2%'}},
+    {ticker:'TTE',name:'TotalEnergies',price:72.30,changes:{'1W':'+8.8%','4W':'+21.5%','1M':'+23.7%','3M':'+30.1%'}},
+    {ticker:'COP',name:'ConocoPhillips',price:138.90,changes:{'1W':'+11.2%','4W':'+28.3%','1M':'+30.8%','3M':'+37.4%'}},
+  ],
+  shipping:[
+    {ticker:'FRO',name:'Frontline',price:28.40,changes:{'1W':'+32.1%','4W':'+89.4%','1M':'+142.3%','3M':'+156.7%'}},
+    {ticker:'INSW',name:'Intl Seaways',price:68.90,changes:{'1W':'+28.5%','4W':'+76.2%','1M':'+118.5%','3M':'+132.1%'}},
+    {ticker:'STNG',name:'Scorpio Tankers',price:82.30,changes:{'1W':'+26.8%','4W':'+71.3%','1M':'+108.7%','3M':'+124.5%'}},
+    {ticker:'EURN',name:'Euronav',price:21.60,changes:{'1W':'+24.2%','4W':'+65.8%','1M':'+94.2%','3M':'+110.8%'}},
+    {ticker:'MAERSK',name:'Maersk',price:11420,changes:{'1W':'-12.4%','4W':'-28.7%','1M':'-34.2%','3M':'-31.5%'}},
+    {ticker:'ZIM',name:'ZIM Shipping',price:14.80,changes:{'1W':'-18.6%','4W':'-38.2%','1M':'-42.1%','3M':'-39.7%'}},
+  ],
+  defense:[
+    {ticker:'LMT',name:'Lockheed Martin',price:525.40,changes:{'1W':'+3.4%','4W':'+12.8%','1M':'+14.9%','3M':'+18.6%'}},
+    {ticker:'RTX',name:'RTX Corp',price:122.30,changes:{'1W':'+4.7%','4W':'+14.3%','1M':'+12.5%','3M':'+21.2%'}},
+    {ticker:'NOC',name:'Northrop Grumman',price:508.60,changes:{'1W':'+6.0%','4W':'+11.5%','1M':'+10.9%','3M':'+17.3%'}},
+    {ticker:'GD',name:'General Dynamics',price:305.80,changes:{'1W':'+3.9%','4W':'+9.8%','1M':'+12.4%','3M':'+15.8%'}},
+    {ticker:'KTOS',name:'Kratos Defense',price:32.40,changes:{'1W':'+10.2%','4W':'+22.5%','1M':'+28.1%','3M':'+34.7%'}},
+  ],
+  losers:[
+    {ticker:'HLAG',name:'Hapag-Lloyd',price:128.50,changes:{'1W':'-14.2%','4W':'-31.5%','1M':'-36.8%','3M':'-33.2%'}},
+    {ticker:'DAL',name:'Delta Airlines',price:42.30,changes:{'1W':'-8.4%','4W':'-15.6%','1M':'-18.2%','3M':'-14.8%'}},
+    {ticker:'UAL',name:'United Airlines',price:58.70,changes:{'1W':'-7.8%','4W':'-14.2%','1M':'-16.5%','3M':'-13.1%'}},
+    {ticker:'AAL',name:'American Airlines',price:11.20,changes:{'1W':'-9.1%','4W':'-18.4%','1M':'-21.7%','3M':'-18.3%'}},
+    {ticker:'HSY',name:'Hershey (transport)',price:168.40,changes:{'1W':'-3.2%','4W':'-8.7%','1M':'-11.4%','3M':'-9.2%'}},
+    {ticker:'BRK',name:'Berkshire (insurers)',price:612400,changes:{'1W':'-2.1%','4W':'-5.8%','1M':'-7.3%','3M':'-4.6%'}},
+  ],
+  commodities:[
+    {ticker:'NTR',name:'Nutrien',price:72.80,changes:{'1W':'+14.5%','4W':'+32.1%','1M':'+38.6%','3M':'+42.3%'}},
+    {ticker:'CF',name:'CF Industries',price:98.40,changes:{'1W':'+16.2%','4W':'+35.8%','1M':'+41.2%','3M':'+45.8%'}},
+    {ticker:'MOS',name:'Mosaic Co',price:38.60,changes:{'1W':'+12.8%','4W':'+28.4%','1M':'+33.7%','3M':'+37.1%'}},
+    {ticker:'UREA',name:'Urea (NOLA)',price:680,changes:{'1W':'+12%','4W':'+27%','1M':'+43%','3M':'+48%'}},
+    {ticker:'LNG',name:'Cheniere Energy',price:198.50,changes:{'1W':'+11.6%','4W':'+26.3%','1M':'+31.8%','3M':'+36.2%'}},
+    {ticker:'K+S',name:'Potash (avg)',price:487,changes:{'1W':'+4%','4W':'+9%','1M':'+12%','3M':'+15%'}},
+  ]
+};
+
+function renderStockTable(containerId,stocks){
+  var el=document.getElementById(containerId);
+  if(!el)return;
+  el.innerHTML=stocks.map(function(s){
+    var ch=s.changes[stockTimeframe];
+    var isUp=ch.charAt(0)==='+';
+    var priceStr=s.price>=1000?(s.price>=10000?s.price.toLocaleString():s.price.toFixed(0)):s.price.toFixed(2);
+    return '<div class="stock-row">'+
+      '<span class="stock-ticker">'+s.ticker+'</span>'+
+      '<span class="stock-name">'+s.name+'</span>'+
+      '<span class="stock-price">$'+priceStr+'</span>'+
+      '<span class="stock-change '+(isUp?'up':'down')+'">'+ch+'</span>'+
+    '</div>';
+  }).join('');
+}
+
+function renderAllStocks(){
+  renderStockTable('stocksOilTable',stockData.oil);
+  renderStockTable('stocksShippingTable',stockData.shipping);
+  renderStockTable('stocksDefenseTable',stockData.defense);
+  renderStockTable('stocksLosersTable',stockData.losers);
+  renderStockTable('stocksCommoditiesTable',stockData.commodities);
+}
+
+function switchTimeframe(btn,tf){
+  stockTimeframe=tf;
+  btn.parentElement.querySelectorAll('.tab-btn').forEach(function(t){t.classList.remove('active');});
+  btn.classList.add('active');
+  renderAllStocks();
+}
+
+function initSectorChart(){
+  new Chart(document.getElementById('sectorChart'),{
+    type:'bar',
+    data:{
+      labels:['Tankers','Fertilizer','LNG','Oil & Gas','Defense','Insurance','Airlines','Container'],
+      datasets:[{
+        data:[142.3,38.6,31.8,24.1,14.9,-7.3,-18.2,-34.2],
+        backgroundColor:function(ctx){return ctx.raw>=0?'rgba(0,112,243,0.4)':'rgba(229,72,77,0.4)';},
+        borderColor:function(ctx){return ctx.raw>=0?'#0070f3':'#e5484d';},
+        borderWidth:1,
+        borderRadius:5
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        title:{display:true,text:'Sector Returns Since Crisis (1M %)',color:'rgba(255,255,255,0.25)',font:{size:10,weight:500}}
+      },
+      scales:{
+        x:{grid:{color:cg},ticks:{color:ct,font:{size:9},callback:function(v){return v+'%';}},
+          min:-50,max:140},
+        y:{grid:{color:'transparent'},ticks:{color:'rgba(255,255,255,0.6)',font:{size:10,weight:600}}}
+      }
+    }
+  });
+}
+
+function updateClock(){
+  var ts=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' '+new Date().toLocaleTimeString('en-US',{hour12:false});
+  document.getElementById('liveTime').textContent=ts;
+  var stEl=document.getElementById('stockTime');
+  if(stEl)stEl.textContent=ts;
+}
+
+// Search functionality
+var searchIndex=[];
+function buildSearchIndex(){
+  searchIndex=[];
+  hormuzVessels.forEach(function(v){searchIndex.push({type:'VESSEL',title:v.vessel,desc:v.owner+' — '+v.flagName+' — '+v.status.toUpperCase(),section:'sec-vessels',zone:'hormuz'});});
+  redseaVessels.forEach(function(v){searchIndex.push({type:'VESSEL',title:v.vessel,desc:v.owner+' — '+v.flagName+' — '+v.status.toUpperCase(),section:'sec-vessels',zone:'redsea'});});
+  companyData.forEach(function(c){searchIndex.push({type:'COMPANY',title:c.name,desc:c.type+' — '+c.stat,section:'sec-analytics'});});
+  timelineData.forEach(function(e){searchIndex.push({type:'EVENT',title:e.title,desc:e.date+' — '+e.desc,section:'sec-timeline'});});
+  countryOilData.forEach(function(c){searchIndex.push({type:'COUNTRY',title:c.name,desc:c.mbd+' mb/d ('+c.share+'% of Hormuz flow)',section:'sec-analytics'});});
+  Object.keys(stockData).forEach(function(sector){
+    stockData[sector].forEach(function(s){searchIndex.push({type:'STOCK',title:s.ticker+' — '+s.name,desc:'$'+s.price+' | 1W: '+s.changes['1W']+' | 1M: '+s.changes['1M'],section:'stocks'});});
+  });
+}
+function openSearch(){
+  document.getElementById('searchOverlay').classList.add('open');
+  document.getElementById('searchInput').value='';
+  document.getElementById('searchInput').focus();
+  document.getElementById('searchResults').innerHTML='<div class="search-empty">Type to search across all intelligence data</div>';
+}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open');}
+function performSearch(q){
+  var results=document.getElementById('searchResults');
+  if(!q.trim()){results.innerHTML='<div class="search-empty">Type to search across all intelligence data</div>';return;}
+  var lower=q.toLowerCase();
+  var matches=searchIndex.filter(function(item){return item.title.toLowerCase().includes(lower)||item.desc.toLowerCase().includes(lower)||item.type.toLowerCase().includes(lower);});
+  if(matches.length===0){results.innerHTML='<div class="search-empty">No results for "'+q+'"</div>';return;}
+  results.innerHTML=matches.slice(0,12).map(function(m){
+    return '<div class="search-result" onclick="goToResult(\''+m.section+'\',\''+m.type+'\')"><div class="search-result-type">'+m.type+'</div><div class="search-result-title">'+m.title+'</div><div class="search-result-desc">'+m.desc+'</div></div>';
+  }).join('');
+}
+function goToResult(section,type){
+  closeSearch();
+  switchView('main');
+  setTimeout(function(){var el=document.getElementById(section);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},100);
+}
+document.addEventListener('keydown',function(e){
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openSearch();}
+  if(e.key==='Escape'){closeSearch();if(document.getElementById('notifPanel').classList.contains('open'))toggleNotif();}
+});
+
+// Notification system
+var notifications=[
+  {type:'critical',title:'Day 16 — Strait Still Closed',desc:'SPR release begins today (400M bbl, 120 days). No coalition commitments after Trump call. Iran retains 80–90% mine-laying capacity.',time:'Just now'},
+  {type:'critical',title:'Trump Calls for Coalition Warships',desc:'Names China, France, Japan, South Korea, UK. USS Tripoli + 2,500 Marines en route. France pledges 2 frigates.',time:'8 min ago'},
+  {type:'warning',title:'Brent Crude: $103.14',desc:'Down from $126 peak after IEA 400M bbl SPR release. Goldman 6-month target $145 if strait stays closed.',time:'32 min ago'},
+  {type:'critical',title:'Op Epic Escort — Not Ready',desc:'Pentagon: 3–4 ships/day possible with 7–8 destroyers. Mine clearance 4–8 weeks. Fortune: strait is a "kill box".',time:'1 hr ago'},
+  {type:'critical',title:'War Risk: $10M+/Trip',desc:'Open market 3.5% hull. Chubb/DFC facility 1.5% for escorted convoys only. US/UK/IL-nexus vessels quoted 5%+.',time:'2 hrs ago'},
+  {type:'warning',title:'Houthi Activity — Red Sea',desc:'Drone swarm detected near Bab al-Mandab. Dual chokepoint crisis continues.',time:'3 hrs ago'},
+  {type:'info',title:'IEA SPR Release Active',desc:'32 nations releasing 400M barrels over 120 days. US contributing 172M bbl (1.4 mb/d). Only covers 15% of lost supply.',time:'4 hrs ago'},
+  {type:'info',title:'China Exception Holds',desc:'IRGC confirms Chinese-flagged or Chinese-chartered vessels continue to transit unmolested.',time:'5 hrs ago'},
+];
+function renderNotifications(){
+  var list=document.getElementById('notifList');
+  list.innerHTML=notifications.map(function(n){
+    return '<div class="notif-item '+n.type+'"><div class="notif-item-title">'+n.title+'</div><div class="notif-item-desc">'+n.desc+'</div><div class="notif-item-time">'+n.time+'</div></div>';
+  }).join('');
+  document.getElementById('notifCount').textContent=notifications.length;
+}
+function toggleNotif(){
+  var panel=document.getElementById('notifPanel');
+  panel.classList.toggle('open');
+}
+
+// Map tooltip interactivity
+function initMapTooltips(){
+  var tooltip=document.getElementById('mapTooltip');
+  var ttTitle=document.getElementById('ttTitle');
+  var ttDesc=document.getElementById('ttDesc');
+  var ttStatus=document.getElementById('ttStatus');
+  var mapWrap=document.querySelector('.map-wrap');
+  var markers=document.querySelectorAll('.map-marker');
+  markers.forEach(function(m){
+    m.addEventListener('mouseenter',function(e){
+      var title=m.getAttribute('data-title');
+      var desc=m.getAttribute('data-desc');
+      var status=m.getAttribute('data-status');
+      var color=m.getAttribute('data-color');
+      ttTitle.textContent=title;
+      ttDesc.textContent=desc;
+      ttStatus.textContent=status;
+      ttStatus.style.background=color;
+      ttStatus.style.color='#000';
+      if(color==='var(--red)')ttStatus.style.cssText='background:rgba(229,72,77,0.15);color:var(--red);';
+      else if(color==='var(--orange)')ttStatus.style.cssText='background:rgba(245,166,35,0.15);color:var(--orange);';
+      else if(color==='var(--green)')ttStatus.style.cssText='background:rgba(69,165,87,0.15);color:var(--green);';
+      else if(color==='var(--accent)')ttStatus.style.cssText='background:rgba(0,112,243,0.15);color:var(--accent);';
+      else if(color==='var(--purple)')ttStatus.style.cssText='background:rgba(142,78,198,0.15);color:var(--purple);';
+      tooltip.classList.add('visible');
+    });
+    m.addEventListener('mousemove',function(e){
+      var rect=mapWrap.getBoundingClientRect();
+      var x=e.clientX-rect.left+12;
+      var y=e.clientY-rect.top-10;
+      if(x+220>rect.width)x=x-240;
+      if(y+100>rect.height)y=y-100;
+      tooltip.style.left=x+'px';
+      tooltip.style.top=y+'px';
+    });
+    m.addEventListener('mouseleave',function(){
+      tooltip.classList.remove('visible');
+    });
+  });
+}
+
+// Theme toggle
+var isDark=true;
+function toggleTheme(){
+  isDark=!isDark;
+  document.body.classList.toggle('light',!isDark);
+  var label=document.getElementById('themeLabel');
+  var icon=document.getElementById('themeIcon');
+  if(isDark){
+    label.textContent='Light Mode';
+    icon.innerHTML='<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  } else {
+    label.textContent='Dark Mode';
+    icon.innerHTML='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
+  // Update map SVG background
+  var mapRect=document.querySelector('.map-svg rect');
+  if(mapRect)mapRect.setAttribute('fill',isDark?'url(#seaGrad)':'#f0f0f0');
+  // Update land masses — themed fills
+  document.querySelectorAll('.map-svg path').forEach(function(p){
+    var fill=p.getAttribute('fill');
+    if(fill==='#1a2232'||fill==='#d8d8d8')p.setAttribute('fill',isDark?'#1a2232':'#d8d8d8');
+    if(fill==='#1e1a14'||fill==='#e0e0e0')p.setAttribute('fill',isDark?'#1e1a14':'#e0e0e0');
+    // Update land strokes from blue to neutral
+    var stroke=p.getAttribute('stroke');
+    if(stroke&&stroke.includes('0,112,243')){
+      p.setAttribute('stroke',isDark?stroke:stroke.replace(/0,112,243/g,'0,0,0').replace(/0\.2\)/,'0.1)').replace(/0\.15\)/,'0.08)'));
+    }
+    if(!isDark&&stroke&&stroke.includes('0,0,0')){
+      // keep neutral in light
+    } else if(isDark&&stroke&&stroke.includes('0,0,0')&&!stroke.includes('0,0,0,1')&&p.getAttribute('fill')==='#0c1a2e'){
+      p.setAttribute('stroke','rgba(0,112,243,0.2)');
+    }
+    if(fill&&fill.includes('0.02'))p.setAttribute('fill',isDark?'rgba(255,255,255,0.02)':'rgba(0,0,0,0.03)');
+  });
+  // Update strait channel, shipping lanes — blue accents to gray in light mode
+  document.querySelectorAll('.map-svg path').forEach(function(p){
+    var stroke=p.getAttribute('stroke');
+    if(!stroke)return;
+    if(!isDark){
+      if(stroke.includes('0,112,243'))p.setAttribute('stroke',stroke.replace(/0,112,243/g,'100,100,100'));
+    } else {
+      if(stroke.includes('100,100,100'))p.setAttribute('stroke',stroke.replace(/100,100,100/g,'0,112,243'));
+    }
+  });
+  // Update animated arc gradient
+  var blueStops=document.querySelectorAll('#blueGlow stop');
+  blueStops.forEach(function(s){
+    var color=s.getAttribute('stop-color');
+    if(!isDark&&color&&color.includes('#0070f3'))s.setAttribute('stop-color','#666666');
+    if(!isDark&&color==='transparent'){}
+    if(isDark&&color&&color.includes('#666666'))s.setAttribute('stop-color','#0070f3');
+  });
+  // Update animated dot
+  document.querySelectorAll('.map-svg circle').forEach(function(c){
+    var fill=c.getAttribute('fill');
+    if(fill==='#0070f3')c.setAttribute('fill',isDark?'#0070f3':'#666666');
+    if(fill==='#666666')c.setAttribute('fill',isDark?'#0070f3':'#666666');
+    if(fill&&fill.includes('0,112,243'))c.setAttribute('fill',isDark?fill:fill.replace(/0,112,243/g,'100,100,100'));
+    if(fill&&fill.includes('100,100,100'))c.setAttribute('fill',isDark?fill.replace(/100,100,100/g,'0,112,243'):fill);
+  });
+  // Update map text fills for visibility
+  document.querySelectorAll('.map-svg text').forEach(function(t){
+    var fill=t.getAttribute('fill');
+    if(!fill)return;
+    // Swap white <-> black text
+    if(!isDark&&fill.includes('rgba(255,255,255')){
+      t.setAttribute('fill',fill.replace('rgba(255,255,255','rgba(0,0,0'));
+    } else if(isDark&&fill.includes('rgba(0,0,0')){
+      t.setAttribute('fill',fill.replace('rgba(0,0,0','rgba(255,255,255'));
+    }
+    // Swap blue accent text to dark gray in light mode
+    if(!isDark&&fill.includes('0,112,243')){
+      t.setAttribute('fill',fill.replace(/0,112,243/g,'80,80,80'));
+    } else if(isDark&&fill.includes('80,80,80')){
+      t.setAttribute('fill',fill.replace(/80,80,80/g,'0,112,243'));
+    }
+  });
+  // Update map grid lines
+  document.querySelectorAll('.map-svg g[stroke] line').forEach(function(l){
+    var p=l.parentElement;if(p&&p.getAttribute('stroke')){
+      p.setAttribute('stroke',isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.06)');
+    }
+  });
+  // Rebuild charts with updated colors
+  rebuildCharts();
+}
+function rebuildCharts(){
+  var gridColor=isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.06)';
+  var tickColor=isDark?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.4)';
+  var titleColor=isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.3)';
+  // Update Chart.js defaults and redraw
+  Chart.helpers.each(Chart.instances,function(chart){
+    if(chart.options.scales){
+      Object.keys(chart.options.scales).forEach(function(axis){
+        if(chart.options.scales[axis].grid)chart.options.scales[axis].grid.color=gridColor;
+        if(chart.options.scales[axis].ticks)chart.options.scales[axis].ticks.color=tickColor;
+      });
+    }
+    if(chart.options.plugins&&chart.options.plugins.title)chart.options.plugins.title.color=titleColor;
+    if(chart.options.plugins&&chart.options.plugins.legend&&chart.options.plugins.legend.labels)chart.options.plugins.legend.labels.color=tickColor;
+    chart.update('none');
+  });
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  renderVessels();renderTimeline();renderSPR();renderDep();renderCountryBars();renderCompanies();
+  renderAllStocks();
+  initTransitChart();initOilChart();initInsuranceChart();initLNGChart();initSectorChart();
+  buildSearchIndex();renderNotifications();initMapTooltips();
+  updateClock();setInterval(updateClock,1000);
+});
+</script>
+</body>
+</html>
